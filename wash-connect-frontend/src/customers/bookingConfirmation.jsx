@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Mail, Calendar, User, MapPin, Phone } from "lucide-react";
 import { FaEnvelope, FaUser, FaStar, FaHeart, FaCalendarAlt, FaSignOutAlt, FaUndo } from "react-icons/fa";
-import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import CarwashMapImg from "../assets/carwash-location.png"; // <-- add this
 
 function BookingConfirmation() {
   const navigate = useNavigate();
@@ -334,29 +333,19 @@ function BookingConfirmation() {
                 </span>
               </div>
               {/* Interactive Map */}
-              <div className="rounded-lg overflow-hidden mb-3" style={{ height: "200px" }}>
-                {booking.lat && booking.lng ? (
-                  <MapContainer
-                    center={[booking.lat, booking.lng]}
-                    zoom={16}
-                    style={{ width: "100%", height: "200px" }}
-                    scrollWheelZoom={false}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <Marker position={[booking.lat, booking.lng]}>
-                      <Popup>
-                        {booking.address}
-                      </Popup>
-                    </Marker>
-                  </MapContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400">
-                    No location data available.
-                  </div>
-                )}
+              <div className="rounded-lg overflow-hidden mb-3 h-52 bg-gray-100 flex items-center justify-center relative">
+                <img
+                  src={CarwashMapImg}
+                  alt="Carwash shop location"
+                  className="w-full h-full object-cover"
+                  draggable="false"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-xs p-2 flex items-start gap-2">
+                  <span className="font-semibold">Address:</span>
+                  <span className="truncate">
+                    {booking.address || "No address available"}
+                  </span>
+                </div>
               </div>
               <div className="flex flex-col md:flex-row gap-4 mb-2">
                 <div className="flex-1">
