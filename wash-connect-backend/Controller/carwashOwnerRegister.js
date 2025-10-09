@@ -21,6 +21,20 @@ exports.registerCarwashOwner = async (req, res) => {
         return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // Allow only Gmail or Yahoo email addresses
+    const allowedEmail = /^[\w.-]+@(gmail\.com|yahoo\.com)$/i.test(owner_email);
+    if (!allowedEmail) {
+        return res.status(400).json({ error: 'Only Gmail and Yahoo email addresses are allowed.' });
+    }
+
+    // Password policy: min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special, no spaces
+    const passwordPolicy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={}\[\]|:";'<>?,.\/]).{8,}$/;
+    if (!passwordPolicy.test(owner_password) || /\s/.test(owner_password)) {
+        return res.status(400).json({
+            error: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character, with no spaces.'
+        });
+    }
+
     try {
         // Hash the password before saving!
         const hashedPassword = await bcrypt.hash(owner_password, 10);

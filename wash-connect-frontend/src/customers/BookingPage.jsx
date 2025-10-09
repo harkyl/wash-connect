@@ -266,9 +266,7 @@ function BookingPage() {
 				<header className="flex items-center px-8 py-6 bg-gradient-to-r from-[#7cc3e2] to-[#a8d6ea] border-b border-gray-200">
 					<span className="text-3xl font-semibold text-white">{carwashName}</span>
 					<div className="ml-auto flex items-center gap-6 text-white relative">
-						<span className="flex items-center text-sm cursor-pointer">
-							<span className="mr-1">💬</span> Message
-						</span>
+									{/* Message label removed */}
 						{/* Profile icon with name */}
 						<div className="flex items-center gap-2 bg-white rounded-full px-3 py-1 border border-cyan-200">
 							<User className="w-5 h-5 text-blue-400" />
@@ -328,10 +326,10 @@ function BookingPage() {
 							value={selectedSort}
 							onChange={(e) => setSelectedSort(e.target.value)}
 						>
-							<option>New</option>
-							<option>Price ascending</option>
-							<option>Price descending</option>
-							<option>Rating</option>
+										<option>New</option>
+										<option>Price ascending</option>
+										<option>Price descending</option>
+										{/* Rating option removed */}
 						</select>
 					</div>
 				</div>

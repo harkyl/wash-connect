@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Phone, MapPin, User, ArrowLeft } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 
 function CarwashRegister() {
   const navigate = useNavigate();
@@ -13,39 +14,59 @@ function CarwashRegister() {
     ownerAddress: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  // Notifications are shown via react-hot-toast
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setError("");
-    setSuccess("");
+    // notifications are handled by toast
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    // notifications handled by toast
+
+    // Email allowlist: only gmail.com or yahoo.com
+    const emailOk = /^[\w.-]+@(gmail\.com|yahoo\.com)$/i.test(form.ownerEmail);
+    if (!emailOk) {
+      toast.error('Only Gmail and Yahoo email addresses are allowed.');
+      return;
+    }
+
+    // Password policy: min 8, 1 upper, 1 lower, 1 digit, 1 special, no spaces
+    const passwordPolicy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,}$/;
+    if (!passwordPolicy.test(form.ownerPassword)) {
+      toast.error('Password must be at least 8 characters and include uppercase, lowercase, number, and special character, with no spaces.');
+      return;
+    }
     try {
       const res = await fetch("http://localhost:3000/api/auth/register-carwash-owner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        // Ensure payload matches backend expected keys
+        body: JSON.stringify({
+          ownerFirstName: form.ownerFirstName,
+          ownerLastName: form.ownerLastName,
+          ownerEmail: form.ownerEmail,
+          ownerPassword: form.ownerPassword,
+          ownerPhone: form.ownerPhone,
+          ownerAddress: form.ownerAddress,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Registration failed");
+        toast.error(data.error || "Registration failed");
         return;
       }
-      setSuccess("Registration successful! You can now log in.");
-      setTimeout(() => navigate("/carwash-login"), 1500);
+      toast.success("Registration successful! You can now log in.");
+      setTimeout(() => navigate("/carwash-login"), 1200);
     } catch {
-      setError("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-cyan-100">
+      <Toaster position="top-center" />
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-lg p-10 border border-gray-200">
         <button
           className="mb-6 p-2 hover:bg-black/10 rounded-full transition-colors"
@@ -155,12 +176,7 @@ function CarwashRegister() {
               placeholder="Address (optional)"
             />
           </div>
-          {error && (
-            <div className="text-red-500 text-center font-medium">{error}</div>
-          )}
-          {success && (
-            <div className="text-green-600 text-center font-medium">{success}</div>
-          )}
+          {/* Notifications handled by toast */}
           <button
             type="submit"
             className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-xl py-3 rounded-full font-semibold hover:from-cyan-600 hover:to-blue-600 transition-all duration-200 shadow-lg mt-2"

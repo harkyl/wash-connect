@@ -161,9 +161,9 @@ export default function BookingHistory() {
           </div>
         </header>
 
-        <div className="flex-1 grid grid-cols-3 gap-6 p-8">
+        <div className="flex-1 min-h-0 grid grid-cols-3 gap-6 p-8">
           {/* Booking History List */}
-          <section className="col-span-2">
+          <section className="col-span-2 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Past Bookings</h3>
               {bookingHistory.length > 0 && (
@@ -173,7 +173,8 @@ export default function BookingHistory() {
               )}
             </div>
 
-            <div className="space-y-4">
+            {/* Scrollable list */}
+            <div className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-4">
               {bookingHistory.length === 0 && (
                 <div className="text-gray-500 text-center">No booking history found.</div>
               )}

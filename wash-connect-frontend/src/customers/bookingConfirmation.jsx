@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Mail, Calendar, User, MapPin, Phone } from "lucide-react";
 import { FaEnvelope, FaUser, FaStar, FaHeart, FaCalendarAlt, FaSignOutAlt, FaUndo } from "react-icons/fa";
-import CarwashMapImg from "../assets/carwash-location.png"; // <-- add this
 
 function BookingConfirmation() {
   const navigate = useNavigate();
@@ -21,6 +20,16 @@ function BookingConfirmation() {
   const [refundReason, setRefundReason] = useState("");
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundSuccess, setRefundSuccess] = useState(false);
+
+  // Helper to resolve carwash logo URL
+  const placeholderLogo = "/default-logo.png";
+  const normalizeLogo = (raw) => {
+    if (!raw) return placeholderLogo;
+    const s = String(raw);
+    if (s.startsWith("http")) return s;
+    if (!s.startsWith("/")) return `http://localhost:3000/uploads/logos/${s}`;
+    return `http://localhost:3000${s}`;
+  };
 
   // Fetch booking details
   useEffect(() => {
@@ -332,13 +341,18 @@ function BookingConfirmation() {
                   ● {booking.status}
                 </span>
               </div>
-              {/* Interactive Map */}
-              <div className="rounded-lg overflow-hidden mb-3 h-52 bg-gray-100 flex items-center justify-center relative">
+              {/* Carwash Logo */}
+              <div className="rounded-lg overflow-hidden mb-3 h-52 bg-white flex items-center justify-center relative border border-gray-200">
                 <img
-                  src={CarwashMapImg}
-                  alt="Carwash shop location"
-                  className="w-full h-full object-cover"
+                  src={normalizeLogo(booking?.logo)}
+                  alt={(booking?.carwashName || "Carwash") + " logo"}
+                  className="w-full h-full object-contain p-3"
                   draggable="false"
+                  onError={(e) => {
+                    if (e.currentTarget.src !== window.location.origin + placeholderLogo) {
+                      e.currentTarget.src = placeholderLogo;
+                    }
+                  }}
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-xs p-2 flex items-start gap-2">
                   <span className="font-semibold">Address:</span>

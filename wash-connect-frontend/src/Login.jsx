@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Check } from "lucide-react"
 import { useNavigate } from 'react-router-dom';
+import toast, { Toaster } from "react-hot-toast";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false)
@@ -32,11 +33,15 @@ function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "Login failed");
+        // Show specific error toast for wrong credentials
+        if (data.error && (data.error.toLowerCase().includes("invalid") || data.error.toLowerCase().includes("wrong"))) {
+          toast.error("Wrong username or password.");
+        } else {
+          toast.error(data.error || "Login failed");
+        }
         return;
       }
       const user = data.user;
-      console.log("User status:", user.status); // Debug log
       if (user.status && user.status.toLowerCase() === 'banned') {
         localStorage.setItem("user", JSON.stringify(user));
         navigate("/banned");
@@ -52,13 +57,14 @@ function Login() {
         navigate("/admin-dashboard");
       }
     } catch (err) {
-      alert("An error occurred. Please try again.");
+      toast.error("An error occurred. Please try again.");
       console.error(err);
     }
   }
 
   return (
     <div className="min-h-screen w-screen flex">
+      <Toaster position="top-center" />
       {/* Left side with form */}
       <div className="flex-1 bg-white flex flex-col p-8">
         <button
@@ -159,23 +165,7 @@ function Login() {
               <span className="italic">Login</span>
             </button>
 
-            {/* Social login */}
-            <div className="flex justify-center space-x-4 pt-4">
-              <button className="p-2 rounded-full hover:bg-gray-100">
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"
-                  alt="Google"
-                  className="w-6 h-6"
-                />
-              </button>
-              <button className="p-2 rounded-full hover:bg-gray-100">
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg"
-                  alt="Facebook"
-                  className="w-6 h-6"
-                />
-              </button>
-            </div>
+            {/* Social login removed */}
           </form>
         </div>
       </div>

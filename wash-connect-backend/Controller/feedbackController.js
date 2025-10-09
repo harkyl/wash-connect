@@ -59,9 +59,13 @@ exports.getReviewsByApplication = async (req, res) => {
     }
     try {
         const [rows] = await pool.query(
-            `SELECT bf.*, b.service_name
+            `SELECT 
+                bf.*, 
+                b.service_name,
+                u.avatar AS customer_avatar
              FROM booking_feedbacks bf
              JOIN bookings b ON bf.appointment_id = b.appointment_id
+             LEFT JOIN users u ON b.user_id = u.user_id
              WHERE b.applicationId = ?`,
             [applicationId]
         );

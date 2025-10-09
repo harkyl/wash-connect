@@ -11,7 +11,7 @@ exports.login = async (req, res) => {
 		}
 
 		const [accounts] = await pool.query(
-			`SELECT user_id AS id, first_name, last_name, email, password, status, role, phone, address, birth_date, gender
+			`SELECT user_id AS id, first_name, last_name, email, password, status, role, phone, address, birth_date, gender, avatar
 			 FROM users 
 			 WHERE email = ? OR user_id = ?`,
 			[identifier, identifier]
@@ -61,7 +61,8 @@ exports.login = async (req, res) => {
 				phone: account.phone,
 				address: account.address,
 				birth_date: account.birth_date,
-				gender: account.gender
+				gender: account.gender,
+				avatar: account.avatar || null
 			}
 		});
 	} catch (err) {

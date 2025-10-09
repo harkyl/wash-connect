@@ -32,6 +32,13 @@ exports.registerUser = async (req, res) => {
     } = req.body;
 
     try {
+        // Password policy: min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special, no spaces
+        const passwordPolicy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={}\[\]|:\";'<>?,.\/]).{8,}$/;
+        if (!passwordPolicy.test(password) || /\s/.test(password)) {
+            return res.status(400).json({
+                error: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character, with no spaces.'
+            });
+        }
         // Only allow Gmail or Yahoo emails
         if (!/^[\w.-]+@(gmail\.com|yahoo\.com)$/i.test(email)) {
             return res.status(400).json({ error: 'Only Gmail and Yahoo email addresses are allowed.' });
@@ -45,7 +52,7 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ error: 'Email already exists' });
         }
 
-        // Hash the password
+    // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert new user into DB, including gender

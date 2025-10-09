@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Mail, Lock, Phone, MapPin, Eye, EyeOff } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 function Register() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -30,7 +31,21 @@ function Register() {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    // Email allowlist: only gmail.com or yahoo.com
+    const emailOk = /^[\w.-]+@(gmail\.com|yahoo\.com)$/i.test(formData.email);
+    if (!emailOk) {
+      toast.error('Only Gmail and Yahoo email addresses are allowed.');
+      return;
+    }
+
+        // Password policy: min 8, 1 upper, 1 lower, 1 digit, 1 special, no spaces
+        const passwordPolicy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,}$/;
+        if (!passwordPolicy.test(formData.password)) {
+      toast.error('Password must be at least 8 characters and include uppercase, lowercase, number, and special character, with no spaces.');
       return;
     }
 
@@ -58,15 +73,16 @@ function Register() {
         throw new Error(data.error || "Registration failed");
       }
 
-      alert("Registration successful! User ID: " + data.userId);
-      navigate("/login"); // Redirect to login page after successful registration
+      toast.success("Registration successful! You can now log in.");
+      setTimeout(() => navigate("/login"), 1200); // Redirect after brief success toast
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error(err.message || "Registration failed");
     }
   };
 
   return (
     <div className="min-h-screen flex">
+      <Toaster position="top-center" />
       <div className="flex-1 bg-gradient-to-br from-sky-200 to-sky-300 relative overflow-hidden">
         <button 
             className="absolute top-6 left-6 p-2 hover:bg-black/10 rounded-full transition-colors z-10"
@@ -218,7 +234,13 @@ function Register() {
             <div className="text-center">
               <p className="text-gray-600">
                 Already have an account?{" "}
-                <a href="#" className="text-cyan-500 hover:underline font-medium">Sign In</a>
+                <button
+                  type="button"
+                  className="text-cyan-500 hover:underline font-medium"
+                  onClick={() => navigate('/login')}
+                >
+                  Sign In
+                </button>
               </p>
             </div>
           </form>

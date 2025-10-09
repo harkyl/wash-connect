@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, User, Mail, Calendar, MapPin } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 
 // Helpers
 const placeholderImg = "https://via.placeholder.com/160?text=Service";
@@ -141,7 +142,7 @@ function BookForm() {
     const schedule_time = form.time;
 
     if (!user_id || !applicationId || !service_name || !schedule_date || !address) {
-      alert("Missing required fields.");
+      toast.error("Missing required fields.");
       setSubmitting(false);
       return;
     }
@@ -170,7 +171,7 @@ function BookForm() {
       if (!res.ok) throw new Error(data.error || "Failed to submit booking.");
       navigate("/booking-status", { state: { appointment_id: data.appointment_id } });
     } catch (error) {
-      alert(error.message);
+      toast.error(error?.message || "Failed to submit booking.");
     } finally {
       setSubmitting(false);
     }
@@ -207,26 +208,68 @@ function BookForm() {
       });
   }, [appointment_id]);
 
-  // Fetch unavailable personnel for selected date/time
+  // Fetch unavailable personnel for selected date/time (strict 60-minute gap)
   useEffect(() => {
     async function fetchUnavailablePersonnel() {
-      if (!form.date || !form.time) {
+      if (!form.date || !form.time || !applicationId) {
         setUnavailablePersonnelIds([]);
         return;
       }
       try {
+        const params = new URLSearchParams({
+          applicationId: String(applicationId),
+          date: form.date,
+        });
         const res = await fetch(
-          `http://localhost:3000/api/bookings/by-date-time?date=${form.date}&time=${form.time}`
+          `http://localhost:3000/api/bookings/by-date-time?${params.toString()}`
         );
-        const data = await res.json();
-        // Assume API returns [{ personnelId: 1 }, ...]
-        setUnavailablePersonnelIds(data.map(b => String(b.personnelId)));
+        if (!res.ok) throw new Error('Failed to load existing bookings');
+        const rows = (await res.json()) || [];
+
+        const inactive = ['cancel', 'refunded', 'declined', 'done', 'completed'];
+        const isInactive = (row) => {
+          const s = String(
+            row?.status ?? row?.booking_status ?? row?.payment_status ?? ''
+          ).toLowerCase();
+          return inactive.some((k) => s.includes(k));
+        };
+
+        const toMinutes = (t) => {
+          if (!t) return NaN;
+          const m = String(t).match(/^(\d{1,2}):(\d{2})/);
+          if (!m) return NaN;
+          return Number(m[1]) * 60 + Number(m[2]);
+        };
+
+        const selectedMin = toMinutes(form.time);
+
+        // Block any personnel with a booking within 60 minutes of selected time
+        const conflicting = rows.filter((row) => {
+          if (isInactive(row)) return false;
+          const rowTime = toMinutes(row?.schedule_time);
+          if (Number.isNaN(selectedMin) || Number.isNaN(rowTime)) return false;
+          const diff = Math.abs(rowTime - selectedMin);
+          return diff < 60; // strict 60-minute gap
+        });
+
+        const ids = conflicting
+          .map((row) => {
+            const id =
+              row?.personnelId ??
+              row?.personnel_id ??
+              row?.personnelID ??
+              row?.personnelid;
+            return id != null ? String(id) : null;
+          })
+          .filter(Boolean);
+
+        setUnavailablePersonnelIds(ids);
       } catch {
         setUnavailablePersonnelIds([]);
       }
     }
     fetchUnavailablePersonnel();
-  }, [form.date, form.time]);
+  }, [applicationId, form.date, form.time]);
 
   const selectedPersonnel = personnelList.find(
     (p) => String(p.personnelId) === String(selectedPersonnelId)
@@ -272,6 +315,7 @@ function BookForm() {
         backgroundPosition: "center",
       }}
     >
+      <Toaster position="top-center" />
       <div className="w-72" />
       <div className="flex-1 flex flex-col items-center justify-center relative z-10">
         <div className="bg-white bg-opacity-95 rounded-2xl shadow p-10 max-w-2xl w-full mx-auto mt-10 mb-10 border border-gray-200 relative">

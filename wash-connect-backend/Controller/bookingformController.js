@@ -360,4 +360,27 @@ exports.rescheduleBooking = async (req, res) => {
     }
 };
 
+// GET /api/bookings/by-date-time?applicationId=123&date=YYYY-MM-DD
+// Returns active bookings for that application and date.
+// Frontend enforces a 60-minute gap using these rows.
+exports.getBookingsByDateTime = async (req, res) => {
+  const { applicationId, date } = req.query;
+  if (!applicationId || !date) {
+    return res.status(400).json({ error: 'Missing applicationId or date' });
+  }
+  try {
+    const [rows] = await pool.query(
+      `SELECT appointment_id, applicationId, personnelId, schedule_date, schedule_time, status, payment_status
+       FROM bookings
+       WHERE applicationId = ?
+         AND schedule_date = ?
+         AND status NOT IN ('Declined','Done','Cancelled','Completed','Refunded')`,
+      [applicationId, date]
+    );
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch bookings by date/time', details: error.message });
+  }
+};
+
 

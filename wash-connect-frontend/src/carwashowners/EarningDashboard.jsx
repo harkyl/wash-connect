@@ -213,6 +213,22 @@ export default function EarningDashboard() {
     return acc;
   }, {});
 
+  // Combine payments details with refunds for display/export (does not affect analytics)
+  const detailsWithRefunds = useMemo(() => {
+    const toDateStr = (s) => {
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+    };
+    const refundRows = (Array.isArray(refunds) ? refunds : []).map((r) => ({
+      date: toDateStr(r.requestedAt),
+      type: "Refund",
+      description: r.reason || "Refund",
+      amount: Number(r.amount || 0),
+      status: r.status || "—",
+    }));
+    return [...details, ...refundRows].sort((a, b) => (a.date < b.date ? 1 : -1));
+  }, [details, refunds]);
+
   // Prepare Net Income Trend chart data (Bar chart for last 6 months)
   const trendLabels = trend.map((month) => month.short);
   const trendValues = trend.map((month) => month.value);
@@ -455,7 +471,7 @@ export default function EarningDashboard() {
                       onClick={() => {
                         const rows = [
                           ["Date", "Type", "Description", "Amount", "Status"],
-                          ...details.map((r) => [r.date, r.type, r.description, r.amount, r.status]),
+                          ...detailsWithRefunds.map((r) => [r.date, r.type, r.description, r.amount, r.status]),
                         ];
                         const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
                         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -482,7 +498,7 @@ export default function EarningDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {details.map((row, idx) => (
+                        {detailsWithRefunds.map((row, idx) => (
                           <tr key={idx} className="border-t">
                             <td className="py-2">{row.date}</td>
                             <td className="py-2">
@@ -505,6 +521,12 @@ export default function EarningDashboard() {
                                     ? "bg-green-200 text-green-800"
                                     : row.status === "Refunded"
                                     ? "bg-red-200 text-red-800"
+                                    : row.status === "Approved"
+                                    ? "bg-green-200 text-green-800"
+                                    : row.status === "Rejected"
+                                    ? "bg-red-200 text-red-800"
+                                    : row.status === "Pending"
+                                    ? "bg-yellow-200 text-yellow-800"
                                     : "bg-gray-200 text-gray-800"
                                 }`}
                               >
@@ -513,7 +535,7 @@ export default function EarningDashboard() {
                             </td>
                           </tr>
                         ))}
-                        {details.length === 0 && (
+                        {detailsWithRefunds.length === 0 && (
                           <tr>
                             <td colSpan={5} className="text-center text-gray-400 py-4">No data available.</td>
                           </tr>

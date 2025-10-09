@@ -18,7 +18,7 @@ export default function CarwashDashboard() {
     const [editSvc, setEditSvc] = useState(null); // Add this state for editing
     const navigate = useNavigate();
 
-    useEffect(() => {
+  useEffect(() => {
         const fetchData = async () => {
             const token = localStorage.getItem("token");
             if (!token) {
@@ -89,8 +89,8 @@ export default function CarwashDashboard() {
             }
         };
 
-        fetchData();
-    }, []);
+    fetchData();
+  }, [navigate]);
 
 	// Optionally, hide the indicator after 2 seconds
 	useEffect(() => {
@@ -660,34 +660,42 @@ export default function CarwashDashboard() {
 						<div className="bg-white rounded-lg shadow p-6">
 							<h4 className="font-semibold text-lg mb-4">Reviews</h4>
 							<div className="space-y-4 max-h-64 overflow-y-auto"> {/* <-- Make scrollable */}
-								{reviews.length === 0 ? (
+                {reviews.length === 0 ? (
 									<div className="text-gray-500 text-sm">No reviews yet.</div>
 								) : (
-									reviews.map((r, i) => (
-										<div key={i} className="flex items-center gap-3">
-											<img
-												src={r.customer_avatar || "https://ui-avatars.com/api/?name=" + encodeURIComponent(r.customer_name || "Customer")}
-												alt=""
-												className="w-10 h-10 rounded-full"
-											/>
-											<div className="flex-1">
-												<div className="font-semibold text-sm">{r.service_name || "Service"}</div>
-												<div className="text-xs text-gray-500 truncate">
-													{r.comment}
-												</div>
-												<div className="text-xs text-gray-400">{r.customer_name}</div>
-											</div>
-											<div className="flex gap-0.5">
-												{[...Array(5)].map((_, idx) =>
-													idx < (r.rating || 0) ? (
-														<FaStar key={idx} className="text-yellow-400 text-xs" />
-													) : (
-														<FaRegStar key={idx} className="text-gray-300 text-xs" />
-													)
-												)}
-											</div>
-										</div>
-									))
+                  reviews.map((r, i) => {
+                    const avatarSrc = r.customer_avatar
+                      ? (String(r.customer_avatar).startsWith('http')
+                        ? r.customer_avatar
+                        : `http://localhost:3000${r.customer_avatar}`)
+                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(r.customer_name || 'Customer')}`;
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <img
+                          src={avatarSrc}
+                          alt=""
+                          className="w-10 h-10 rounded-full object-cover"
+                          onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(r.customer_name || 'Customer')}`; }}
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm">{r.service_name || "Service"}</div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {r.comment}
+                          </div>
+                          <div className="text-xs text-gray-400">{r.customer_name}</div>
+                        </div>
+                        <div className="flex gap-0.5">
+                          {[...Array(5)].map((_, idx) =>
+                            idx < (r.rating || 0) ? (
+                              <FaStar key={idx} className="text-yellow-400 text-xs" />
+                            ) : (
+                              <FaRegStar key={idx} className="text-gray-300 text-xs" />
+                            )
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
 								)}
 							</div>
 						</div>

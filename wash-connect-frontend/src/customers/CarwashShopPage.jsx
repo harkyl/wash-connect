@@ -389,9 +389,7 @@ function CarwashShopPage() {
                           <span className="line-clamp-1">{shop.location || "—"}</span>
                         </div>
                         <div className="mt-auto flex gap-2">
-                          <button className="flex-1 bg-black text-white px-3 py-1 rounded text-xs hover:bg-gray-800 transition">
-                            Message
-                          </button>
+                          {/* Message button removed */}
                           <button
                             className="flex-1 bg-blue-50 text-blue-700 px-3 py-1 rounded text-xs border border-blue-300 hover:bg-blue-100 transition"
                             onClick={() => handleViewServices(shop)}

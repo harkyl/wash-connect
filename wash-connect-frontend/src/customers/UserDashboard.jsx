@@ -89,14 +89,34 @@ function UserDashboard() {
   }
 
   // Handle profile picture upload
-  const handleProfilePicChange = (e) => {
+  const handleProfilePicChange = async (e) => {
     const file = e.target.files[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setProfilePic(reader.result)
+    if (!file) return;
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const userId = user.id || user.user_id;
+      if (!userId) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`http://localhost:3000/api/users/${userId}/avatar`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        console.error("Avatar upload failed");
+        return;
       }
-      reader.readAsDataURL(file)
+      const data = await res.json();
+      const avatarUrl = data.avatar?.startsWith('http') ? data.avatar : `http://localhost:3000${data.avatar}`;
+      setProfilePic(avatarUrl);
+
+      // Persist to localStorage user object for reuse across app
+      const updated = { ...user, avatar: data.avatar };
+      localStorage.setItem("user", JSON.stringify(updated));
+    } catch (err) {
+      console.error("Error uploading avatar:", err);
     }
   }
 
@@ -190,7 +210,16 @@ function UserDashboard() {
               <div className="bg-gradient-to-br from-cyan-100 to-blue-50 rounded-2xl p-8 shadow-xl flex flex-col items-center relative">
                 <div className="relative mb-4 flex flex-col items-center">
                   <img
-                    src={profilePic || "/placeholder.svg"}
+                    src={
+                      profilePic ||
+                      (() => {
+                        const u = JSON.parse(localStorage.getItem("user") || "{}");
+                        if (u?.avatar) {
+                          return u.avatar.startsWith('http') ? u.avatar : `http://localhost:3000${u.avatar}`;
+                        }
+                        return "/placeholder.svg";
+                      })()
+                    }
                     alt="Profile"
                     className="w-28 h-28 rounded-full object-cover border-4 border-cyan-300 shadow-lg"
                   />
