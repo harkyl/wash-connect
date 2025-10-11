@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Mail, Calendar, User, MapPin, Phone } from "lucide-react";
 import { FaEnvelope, FaUser, FaStar, FaHeart, FaCalendarAlt, FaSignOutAlt, FaUndo } from "react-icons/fa";
+import toast, { Toaster } from "react-hot-toast";
 
 function BookingConfirmation() {
   const navigate = useNavigate();
@@ -20,6 +21,15 @@ function BookingConfirmation() {
   const [refundReason, setRefundReason] = useState("");
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundSuccess, setRefundSuccess] = useState(false);
+
+  // Feedback modal state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
+  // Use booking.appointment_id if available, else the one from location
+  const apiAppointmentId = booking?.appointment_id || appointment_id;
 
   // Helper to resolve carwash logo URL
   const placeholderLogo = "/default-logo.png";
@@ -89,6 +99,15 @@ function BookingConfirmation() {
       setLoading(false);
     }
   }, []);
+
+  // Auto-open feedback modal once booking is completed (only once per appointment)
+  useEffect(() => {
+    if (!apiAppointmentId) return;
+    const already = localStorage.getItem(`feedback:${apiAppointmentId}`);
+    if (booking?.status === "Completed" && !already) {
+      setShowFeedbackModal(true);
+    }
+  }, [booking?.status, apiAppointmentId]);
 
   if (loading) {
     return (
@@ -237,8 +256,58 @@ function BookingConfirmation() {
     (Array.isArray(booking?.payments) &&
       booking.payments.some((p) => ["Paid", "Partial"].includes(p.payment_status)));
 
+  // NEW: fully paid flag (locks Pay Now)
+  const isFullyPaid = latestPaymentStatus === "Paid" || remainingBalance <= 0;
+
+  const handleSubmitFeedback = async () => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const user_id = user.user_id || user.id;
+
+    if (!user_id || !apiAppointmentId) {
+      toast.error("Missing data to submit feedback.");
+      return;
+    }
+
+    setSubmittingFeedback(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:3000/api/feedback/${apiAppointmentId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ user_id, rating, comment }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 409) {
+        // Feedback already submitted for this booking
+        localStorage.setItem(`feedback:${apiAppointmentId}`, "1");
+        setShowFeedbackModal(false);
+        toast.error(data.error || "Feedback already submitted for this booking.");
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to submit feedback");
+      }
+
+      localStorage.setItem(`feedback:${apiAppointmentId}`, "1");
+      setShowFeedbackModal(false);
+      setComment("");
+      toast.success("Thank you for your feedback!");
+    } catch (e) {
+      toast.error(e.message || "Failed to submit feedback.");
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-[#c8f1ff]">
+      <Toaster position="top-center" />
       {/* Sidebar */}
       <div className="w-72 bg-white border-r border-gray-200 flex flex-col min-h-screen">
         <div className="flex items-center px-8 py-8 border-b border-gray-100">
@@ -519,18 +588,26 @@ function BookingConfirmation() {
                   <span>PHP {remainingBalance > 0 ? remainingBalance : 0}</span>
                 </div>
               </div>
-              <button className="w-full bg-green-500 text-white py-2 rounded font-semibold mb-2 hover:bg-green-600"
-                onClick={() =>
+              <button
+                className={`w-full py-2 rounded font-semibold mb-2 ${
+                  isFullyPaid
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-green-500 text-white hover:bg-green-600"
+                }`}
+                onClick={() => {
+                  if (isFullyPaid) return;
                   navigate("/payment", {
                     state: {
                       appointment_id,
                       previousPayments: paidAmount,
                       subtotal: servicePrice
                     }
-                  })
-                }
+                  });
+                }}
+                disabled={isFullyPaid}
+                title={isFullyPaid ? "Already paid" : "Proceed to payment"}
               >
-                Pay Now
+                {isFullyPaid ? "Paid" : "Pay Now"}
               </button>
               <button
                 className="w-full bg-gray-200 text-gray-700 py-2 rounded font-semibold hover:bg-gray-300"
@@ -612,6 +689,63 @@ function BookingConfirmation() {
                 Refund request submitted!
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-2">
+              Rate {booking?.carwashName || "Carwash"}
+            </h3>
+            <div className="text-sm text-gray-600 mb-4">
+              {booking?.service_name || booking?.service || "Service"}
+            </div>
+
+            {/* Stars */}
+            <div className="flex items-center gap-2 mb-4">
+              {[1,2,3,4,5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setRating(n)}
+                  className="text-2xl"
+                  title={`${n} star${n>1 ? "s" : ""}`}
+                >
+                  <span className={n <= rating ? "text-yellow-400" : "text-gray-300"}>★</span>
+                </button>
+              ))}
+              <span className="ml-2 text-sm text-gray-700">{rating}/5</span>
+            </div>
+
+            <textarea
+              className="w-full border rounded p-2 mb-4"
+              rows={3}
+              placeholder="Share your experience..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+            />
+
+            <div className="flex gap-2 justify-end">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700"
+                onClick={() => {
+                  localStorage.setItem(`feedback:${appointment_id}`, "1");
+                  setShowFeedbackModal(false);
+                }}
+                disabled={submittingFeedback}
+              >
+                Skip
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
+                onClick={handleSubmitFeedback}
+                disabled={submittingFeedback}
+              >
+                {submittingFeedback ? "Submitting..." : "Submit"}
+              </button>
+            </div>
           </div>
         </div>
       )}

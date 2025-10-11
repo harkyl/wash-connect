@@ -72,13 +72,24 @@ function AdminApplicationRequests() {
     setActionLoading(null);
   };
 
+  // Normalize status (case-insensitive, trims, defaults to "Pending" if empty)
+  const normalizeStatus = (v) => {
+    const s = String(v || "").trim().toLowerCase();
+    if (!s) return "Pending";
+    if (s === "pending" || s === "approved" || s === "declined") {
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
   // Filtering and searching
   const filtered = applications.filter((app) => {
-    const matchesStatus = statusFilter ? app.status === statusFilter : true;
+    const appStatus = normalizeStatus(app.status);
+    const matchesStatus = statusFilter ? appStatus === statusFilter : true;
     const matchesSearch =
-      app.owner_first_name.toLowerCase().includes(search.toLowerCase()) ||
-      app.owner_last_name.toLowerCase().includes(search.toLowerCase()) ||
-      app.carwashName.toLowerCase().includes(search.toLowerCase());
+      (app.owner_first_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (app.owner_last_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (app.carwashName || "").toLowerCase().includes(search.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -202,61 +213,67 @@ function AdminApplicationRequests() {
                       <td colSpan={5} className="text-center py-8 text-gray-400">No applications found.</td>
                     </tr>
                   ) : (
-                    paginated.map((app) => (
-                      <tr key={app.applicationId} className="border-t border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-cyan-100 flex items-center justify-center text-cyan-700 font-bold text-lg">
-                            {app.owner_first_name[0]}
-                          </div>
-                          <div>
-                            <div className="font-semibold">{app.owner_first_name} {app.owner_last_name}</div>
-                            <div className="text-xs text-gray-500">{app.owner_email}</div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">{app.carwashName}</td>
-                        <td className="py-3 px-4 flex items-center gap-1">
-                          <MapPin className="w-4 h-4 text-cyan-500" />
-                          {app.location}
-                        </td>
-                        <td className="py-3 px-4">
-                          {app.status === "Pending" && (
-                            <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Pending</span>
-                          )}
-                          {app.status === "Approved" && (
-                            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Approved</span>
-                          )}
-                          {app.status === "Declined" && (
-                            <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">Declined</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 flex gap-2">
-                          {app.status === "Pending" && (
-                            <>
-                              <button
-                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
-                                disabled={actionLoading === app.applicationId + "-approve"}
-                                onClick={() => handleApprove(app.applicationId)}
-                              >
-                                <Check className="w-4 h-4" /> Approve
-                              </button>
-                              <button
-                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
-                                disabled={actionLoading === app.applicationId + "-decline"}
-                                onClick={() => handleDecline(app.applicationId)}
-                              >
-                                <X className="w-4 h-4" /> Decline
-                              </button>
-                            </>
-                          )}
-                          <button
-                            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
-                            onClick={() => { setSelectedApp(app); setModalOpen(true); }}
-                          >
-                            <Eye className="w-4 h-4" /> View
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    paginated.map((app) => {
+                      const s = normalizeStatus(app.status);
+                      return (
+                        <tr key={app.applicationId} className="border-t border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-cyan-100 flex items-center justify-center text-cyan-700 font-bold text-lg">
+                              {(app.owner_first_name || "?")[0]}
+                            </div>
+                            <div>
+                              <div className="font-semibold">{app.owner_first_name} {app.owner_last_name}</div>
+                              <div className="text-xs text-gray-500">{app.owner_email}</div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">{app.carwashName}</td>
+                          <td className="py-3 px-4 flex items-center gap-1">
+                            <MapPin className="w-4 h-4 text-cyan-500" />
+                            {app.location}
+                          </td>
+                          <td className="py-3 px-4">
+                            {s === "Pending" && (
+                              <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Pending</span>
+                            )}
+                            {s === "Approved" && (
+                              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Approved</span>
+                            )}
+                            {s === "Declined" && (
+                              <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">Declined</span>
+                            )}
+                            {s !== "Pending" && s !== "Approved" && s !== "Declined" && (
+                              <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">{s}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 flex gap-2">
+                            {s === "Pending" && (
+                              <>
+                                <button
+                                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                                  disabled={actionLoading === app.applicationId + "-approve"}
+                                  onClick={() => handleApprove(app.applicationId)}
+                                >
+                                  <Check className="w-4 h-4" /> Approve
+                                </button>
+                                <button
+                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                                  disabled={actionLoading === app.applicationId + "-decline"}
+                                  onClick={() => handleDecline(app.applicationId)}
+                                >
+                                  <X className="w-4 h-4" /> Decline
+                                </button>
+                              </>
+                            )}
+                            <button
+                              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
+                              onClick={() => { setSelectedApp(app); setModalOpen(true); }}
+                            >
+                              <Eye className="w-4 h-4" /> View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
