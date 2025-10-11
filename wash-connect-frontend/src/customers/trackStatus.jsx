@@ -85,7 +85,7 @@ export default function TrackStatus() {
             onClick={() => navigate("/book")}
           >
             <FaHeart className="mr-3 w-5 h-5" />
-            Bookings
+            Services
           </div>
           {/* Track Status Tab */}
           <div

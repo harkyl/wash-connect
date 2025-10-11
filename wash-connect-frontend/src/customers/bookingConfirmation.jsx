@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Mail, Calendar, User, MapPin, Phone } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, User, Phone } from "lucide-react";
 import { FaEnvelope, FaUser, FaStar, FaHeart, FaCalendarAlt, FaSignOutAlt, FaUndo } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -27,6 +27,9 @@ function BookingConfirmation() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
+  // NEW: owner phone for "Need our help?"
+  const [ownerPhone, setOwnerPhone] = useState("");
 
   // Use booking.appointment_id if available, else the one from location
   const apiAppointmentId = booking?.appointment_id || appointment_id;
@@ -56,6 +59,39 @@ function BookingConfirmation() {
       setBooking(null);
     }
   }, [appointment_id]);
+
+  // NEW: Resolve owner phone using owner_id or applicationId
+  useEffect(() => {
+    let ignore = false;
+    async function loadOwnerPhone() {
+      try {
+        const ownerId = booking?.owner_id ?? booking?.ownerId;
+        // 1) Try via owner_id
+        if (ownerId) {
+          const r1 = await fetch(`http://localhost:3000/api/owners/${ownerId}/phone`);
+          if (r1.ok) {
+            const d1 = await r1.json();
+            if (!ignore) setOwnerPhone(d1?.owner_phone || "");
+            if (d1?.owner_phone) return;
+          }
+        }
+        // 2) Fallback via applicationId
+        if (booking?.applicationId) {
+          const r2 = await fetch(`http://localhost:3000/api/applications/${booking.applicationId}/owner-phone`);
+          if (r2.ok) {
+            const d2 = await r2.json();
+            if (!ignore) setOwnerPhone(d2?.owner_phone || "");
+            return;
+          }
+        }
+        if (!ignore) setOwnerPhone("");
+      } catch {
+        if (!ignore) setOwnerPhone("");
+      }
+    }
+    if (booking) loadOwnerPhone();
+    return () => { ignore = true; };
+  }, [booking?.owner_id, booking?.ownerId, booking?.applicationId]);
 
   // Fetch personnel if not already set
   useEffect(() => {
@@ -337,7 +373,7 @@ function BookingConfirmation() {
             onClick={() => navigate('/book')}
           >
             <FaHeart className="mr-3 w-5 h-5" />
-            Bookings
+            Services
           </div>
           {/* Track Status tab above Appointment, NOT bold or highlighted */}
           <div
@@ -423,19 +459,10 @@ function BookingConfirmation() {
                     }
                   }}
                 />
-                <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-xs p-2 flex items-start gap-2">
-                  <span className="font-semibold">Address:</span>
-                  <span className="truncate">
-                    {booking.address || "No address available"}
-                  </span>
-                </div>
               </div>
+
               <div className="flex flex-col md:flex-row gap-4 mb-2">
                 <div className="flex-1">
-                  <div className="flex items-center mb-1 text-gray-700">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    {booking.address}
-                  </div>
                   <div className="flex items-center mb-1 text-gray-700">
                     <Phone className="w-4 h-4 mr-2" />
                     {booking.customer_phone}
@@ -459,9 +486,10 @@ function BookingConfirmation() {
                       &nbsp; <b>Time Booked:</b> {booking.schedule_time}
                     </span>
                   </div>
-                  <button className="mt-2 px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 text-sm">
+                  {/* REMOVED: View Location button */}
+                  {/* <button className="mt-2 px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 text-sm">
                     View Location
-                  </button>
+                  </button> */}
                 </div>
               </div>
               <div className="border-t pt-2 mt-2 text-xs text-gray-500">
@@ -537,12 +565,19 @@ function BookingConfirmation() {
               <div>
                 <div className="font-semibold mb-1">Need our help?</div>
                 <div className="text-gray-700 text-sm">
-                  Call us in case you face any issue in our service
+                  Call the carwash owner if you face any issue in our service
                 </div>
               </div>
-              <button className="flex items-center gap-2 px-3 py-2 border rounded bg-gray-100 hover:bg-gray-200 text-sm">
-                <Phone className="w-4 h-4" /> 09949066002
-              </button>
+              {ownerPhone ? (
+                <a
+                  href={`tel:${ownerPhone}`}
+                  className="flex items-center gap-2 px-3 py-2 border rounded bg-gray-100 hover:bg-gray-200 text-sm"
+                >
+                  <Phone className="w-4 h-4" /> {ownerPhone}
+                </a>
+              ) : (
+                <div className="text-gray-500 text-sm">Phone not available</div>
+              )}
             </div>
           </div>
           {/* Right: Payment Summary */}

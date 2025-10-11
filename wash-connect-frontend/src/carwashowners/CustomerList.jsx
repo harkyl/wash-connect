@@ -8,6 +8,71 @@ const statusColors = {
   "Blocked": "border-red-400 text-red-600",
 };
 
+// Derive customers from raw bookings: group by user/email and tag repeat vs new
+const deriveCustomersFromBookings = (rows = []) => {
+  const byKey = new Map();
+
+  const isCompleted = (row) => {
+    const s = String(row?.status ?? row?.booking_status ?? "").toLowerCase();
+    return s === "completed" || s === "done" || s.includes("complete");
+  };
+
+  for (const r of rows) {
+    const key = r.user_id ?? r.userId ?? r.customer_email ?? r.email;
+    if (!key) continue;
+
+    const latestAny =
+      r.latest_booking || r.updated_at || r.created_at || r.schedule_date || r.date || null;
+
+    const first = r.customer_first_name ?? r.first_name ?? "";
+    const last = r.customer_last_name ?? r.last_name ?? "";
+    const email = r.customer_email ?? r.email ?? "";
+
+    if (!byKey.has(key)) {
+      byKey.set(key, {
+        user_id: r.user_id ?? r.userId ?? null,
+        customer_first_name: first,
+        customer_last_name: last,
+        customer_email: email,
+        address: r.address ?? "",
+        avatar: r.avatar ?? r.customer_avatar ?? "",
+        totalBookings: 0,
+        completedBookings: 0,
+        latest_booking: latestAny,          // any status
+        latest_completed_booking: null,     // completed-only
+      });
+    }
+    const item = byKey.get(key);
+    item.totalBookings += 1;
+
+    if (latestAny) {
+      if (!item.latest_booking || new Date(latestAny) > new Date(item.latest_booking)) {
+        item.latest_booking = latestAny;
+      }
+    }
+
+    if (isCompleted(r)) {
+      item.completedBookings += 1;
+      const when =
+        r.completed_at || r.updated_at || r.created_at || r.schedule_date || r.date || null;
+      if (when) {
+        if (
+          !item.latest_completed_booking ||
+          new Date(when) > new Date(item.latest_completed_booking)
+        ) {
+          item.latest_completed_booking = when;
+        }
+      }
+    }
+  }
+
+  return Array.from(byKey.values()).map((c) => ({
+    ...c,
+    status: c.completedBookings >= 2 ? "Repeat Customer" : "New Customer",
+    latest_for_sort: c.latest_completed_booking || c.latest_booking || null,
+  }));
+};
+
 function CustomerList() {
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState("");
@@ -15,57 +80,76 @@ function CustomerList() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Token authentication
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/carwash-login");
       return;
     }
 
-    // Fetch confirmed customers for this carwash branch
     const owner = JSON.parse(localStorage.getItem("carwashOwner"));
     if (!owner || !owner.id) return;
 
-    // Get applicationId for this owner
-    fetch(`http://localhost:3000/api/carwash-applications/by-owner/${owner.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
+    (async () => {
+      try {
+        const appRes = await fetch(`http://localhost:3000/api/carwash-applications/by-owner/${owner.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (appRes.status === 401) {
+          navigate("/carwash-login");
+          return;
+        }
+        const app = await appRes.json();
+        if (!app?.applicationId) {
+          setCustomers([]);
+          return;
+        }
+
+        // Try aggregated endpoint (counts only Completed/Done)
+        const aggRes = await fetch(`http://localhost:3000/api/customers/by-application/${app.applicationId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (aggRes.ok) {
+          const agg = await aggRes.json();
+          setCustomers(Array.isArray(agg) ? agg : []);
+          return;
+        }
+
+        // Fallback: fetch bookings and derive on client
+        const res = await fetch(`http://localhost:3000/api/bookings/confirmed/${app.applicationId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         if (res.status === 401) {
           navigate("/carwash-login");
-          return null;
+          return;
         }
-        return res.json();
-      })
-      .then(data => {
-        if (data && data.applicationId) {
-          // Fetch only confirmed bookings for this applicationId
-          fetch(`http://localhost:3000/api/bookings/confirmed/${data.applicationId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-            .then(res => {
-              if (res.status === 401) {
-                navigate("/carwash-login");
-                return [];
-              }
-              return res.json();
-            })
-            .then(setCustomers)
-            .catch(() => setCustomers([]));
-        }
-      });
+        const rows = await res.json();
+        const hasStatus = Array.isArray(rows) && rows.some(r => typeof r.status === "string");
+        const data = hasStatus ? rows : deriveCustomersFromBookings(rows);
+        setCustomers(Array.isArray(data) ? data : []);
+      } catch {
+        setCustomers([]);
+      }
+    })();
   }, [navigate]);
 
   // Filter and sort customers
   const filtered = customers
     .filter(c =>
-      (c.customer_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (c.email || "").toLowerCase().includes(search.toLowerCase())
+      (c.customer_name || `${c.customer_first_name || ""} ${c.customer_last_name || ""}`)
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      (c.customer_email || "").toLowerCase().includes(search.toLowerCase())
     )
-    .filter(c => c.status !== "Blocked") // <-- Remove blocked customers
+    .filter(c => c.status !== "Blocked")
     .sort((a, b) => {
-      if (sort === "date") return new Date(b.latest_booking) - new Date(a.latest_booking);
-      if (sort === "name") return (a.customer_name || "").localeCompare(b.customer_name || "");
+      if (sort === "date") return new Date(b.latest_for_sort) - new Date(a.latest_for_sort);
+      if (sort === "name")
+        return (
+          (a.customer_name || `${a.customer_first_name || ""} ${a.customer_last_name || ""}`).localeCompare(
+            b.customer_name || `${b.customer_first_name || ""} ${b.customer_last_name || ""}`
+          )
+        );
       return 0;
     });
 

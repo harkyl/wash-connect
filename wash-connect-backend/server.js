@@ -27,6 +27,8 @@ const refundRoutes = require('./routes/refund'); // Add this line
 const reviewsRoutes = require('./routes/reviews'); // Add this line
 const forgotPasswordRoutes = require('./routes/forgotpassword'); // Add this line
 const resetPasswordRoutes = require('./routes/resetpassword'); // Add this line
+const ownersRoutes = require('./routes/owners'); // Add this line
+const customerRoutes = require('./routes/customers');
 
 const app = express();
 const path = require('path');
@@ -56,6 +58,8 @@ app.use('/api/refunds', refundRoutes); // Add this line
 app.use('/api', reviewsRoutes); // Add this line
 app.use('/api/forgot-password', forgotPasswordRoutes); // Add this line
 app.use('/api/reset-password', resetPasswordRoutes); // Add this line
+app.use('/api', ownersRoutes); // Add this line
+app.use('/api', customerRoutes); // Add this line
 
 //admin
 app.use('/api/admin', adminRegisterRoutes);

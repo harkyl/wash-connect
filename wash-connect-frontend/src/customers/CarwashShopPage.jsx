@@ -220,7 +220,7 @@ function CarwashShopPage() {
             onClick={() => navigate("/book")}
           >
             <FaHeart className="mr-3 w-5 h-5" />
-            Bookings
+            Services
           </div>
           {/* Removed <hr className="my-4" /> */}
           {/* Track Status Tab */}

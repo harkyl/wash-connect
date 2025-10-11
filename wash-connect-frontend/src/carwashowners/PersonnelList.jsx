@@ -91,12 +91,6 @@ function PersonnelList() {
         </div>
         {/* Navigation */}
         <nav className="flex-1 px-4 space-y-2">
-          <div className="flex items-center justify-between mb-2 hover:bg-gray-100 px-2 py-1 rounded cursor-pointer transition-colors duration-200">
-            <span className="flex items-center gap-2 text-gray-700">
-              <FaRegEnvelope className="text-lg" /> Inbox
-            </span>
-            <span className="text-xs text-gray-700">24</span>
-          </div>
           <button
             className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 cursor-pointer transition-colors duration-200"
             onClick={() => navigate("/carwash-dashboard")}
@@ -108,6 +102,14 @@ function PersonnelList() {
             onClick={() => navigate("/personnel-list")}
           >
             <span className="text-lg">★</span> Customers & Employee
+          </button>
+          {/* NEW: Status Update below Customers & Employee */}
+          <button
+            className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 cursor-pointer transition-colors duration-200"
+            onClick={() => navigate("/status-update")}
+          >
+            <FaBars className="text-lg" />
+            <span>Status Update</span>
           </button>
           <hr className="my-2 border-gray-300" />
           <button
@@ -124,6 +126,11 @@ function PersonnelList() {
           <div className="flex items-center gap-2 mt-2 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200" onClick={() => navigate('/earning-dashboard')}>
             <FaTrophy className="text-lg" />
             <span>Earnings Dashboard</span>
+          </div>
+          {/* NEW: Request Refund link below Earnings Dashboard */}
+          <div className="flex items-center gap-2 mt-2 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200" onClick={() => navigate('/refund-request')}>
+            <FaRegFolderOpen className="text-lg" />
+            <span>Request Refund</span>
           </div>
           <hr className="my-4 border-gray-300" />
         </nav>
@@ -277,11 +284,7 @@ function PersonnelList() {
                     >
                       View Details
                     </button>
-                    <button className="flex-1 bg-yellow-400 text-gray-800 rounded px-3 py-1 text-xs font-medium hover:bg-yellow-500"
-                      onClick={() => navigate("/personnel-assign", { state: { personnel: p } })}
-                    >
-                      Assigned to
-                    </button>
+                    {/* Removed "Assigned to" button */}
                     <button className="text-gray-400 hover:text-gray-700 px-2"
                       onClick={() => navigate("/personnel-edit", { state: { personnel: p } })}
                     >

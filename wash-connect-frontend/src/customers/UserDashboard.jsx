@@ -15,6 +15,29 @@ import {
 } from "lucide-react"
 import { FaEnvelope, FaUser, FaStar, FaHeart } from "react-icons/fa"
 
+// Helper: format birthday to YYYY-MM-DD, stripping time/UTC part
+const formatBirthday = (raw) => {
+  if (!raw) return "";
+  const s = String(raw).trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  try {
+    const d = new Date(s);
+    if (!isNaN(d)) return d.toLocaleDateString();
+  } catch { /* empty */ }
+  return s.split("T")[0];
+};
+
+// NEW: format date-only for bookings (removes T... part)
+const formatDateOnly = (raw) => {
+  if (!raw) return "";
+  if (raw instanceof Date) return raw.toISOString().slice(0, 10);
+  const s = String(raw).trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (m) return m[1];
+  return s.includes("T") ? s.split("T")[0] : s;
+};
+
 function UserDashboard() {
   const navigate = useNavigate()
   const [userInfo, setUserInfo] = useState({
@@ -42,10 +65,10 @@ function UserDashboard() {
         firstName: parsedUser.first_name || "",
         lastName: parsedUser.last_name || "",
         email: parsedUser.email || "",
-        contactNumber: parsedUser.phone || "",      // <-- Make sure this is 'phone'
-        address: parsedUser.address || "",          // <-- Make sure this is 'address'
-        birthday: parsedUser.birth_date || "",      // <-- Make sure this is 'birth_date'
-        gender: parsedUser.gender || "",            // <-- Make sure this is 'gender'
+        contactNumber: parsedUser.phone || "",
+        address: parsedUser.address || "",
+        birthday: formatBirthday(parsedUser.birth_date || parsedUser.birthday || ""), // <-- format here
+        gender: parsedUser.gender || "",
       })
     } catch {
       navigate("/login")
@@ -146,7 +169,7 @@ function UserDashboard() {
             onClick={() => navigate("/book")}
           >
             <FaHeart className="mr-3 w-5 h-5" />
-            Bookings
+            Services
           </div>
           {/* Track Status Tab */}
           <div
@@ -289,7 +312,7 @@ function UserDashboard() {
                   </div>
                   <button
                     className="bg-cyan-500 text-white px-6 py-2 rounded-lg hover:bg-cyan-600 transition-colors font-semibold shadow"
-                    onClick={() => navigate("/book")}
+                    onClick={() => navigate("/popular-carwash")}
                   >
                     Book Now
                   </button>
@@ -326,7 +349,9 @@ function UserDashboard() {
                             <span className="font-semibold text-cyan-700 text-base">
                               {booking.price ? `₱${booking.price}` : ""}
                             </span>
-                            <span className="text-xs text-gray-500">{booking.date || booking.schedule_date}</span>
+                            <span className="text-xs text-gray-500">
+                              {formatDateOnly(booking.date || booking.schedule_date)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -373,7 +398,9 @@ function UserDashboard() {
                     <label className="flex items-center text-sm text-gray-600 mb-2">
                       <Calendar className="mr-2 text-cyan-400" /> Birthday
                     </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.birthday}</div>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">
+                      {formatBirthday(userInfo.birthday)} {/* <-- ensure no time displayed */}
+                    </div>
                   </div>
                   <div>
                     <label className="flex items-center text-sm text-gray-600 mb-2">
