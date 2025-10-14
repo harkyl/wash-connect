@@ -2,11 +2,8 @@ const pool = require('../db');
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail", // or your provider
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+  service: "gmail",
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
 });
 
 // Helper: get current total paid for an appointment (optional)
@@ -16,6 +13,19 @@ async function getTotalPaid(appointmentId) {
     [appointmentId]
   );
   return rows[0]?.total_paid || 0;
+}
+
+// NEW: Helper to get carwash name by appointmentId
+async function getCarwashNameByAppointment(appointmentId) {
+  const [rows] = await pool.query(
+    `SELECT a.carwashName
+       FROM bookings b
+       JOIN carwash_applications a ON a.applicationId = b.applicationId
+      WHERE b.appointment_id = ?
+      LIMIT 1`,
+    [appointmentId]
+  );
+  return rows[0]?.carwashName || null;
 }
 
 // Send email notification about payment status
@@ -59,25 +69,26 @@ exports.createPayment = async (req, res) => {
       // Example: if frontend also sends expected total target, you could compare there.
     }
 
-    // In your payment creation logic
     const tax = amount * 0.10;
     await pool.query(
       "INSERT INTO payments (appointment_id, user_id, amount, method, payment_status, tax) VALUES (?, ?, ?, ?, ?, ?)",
       [appointmentId, user_id, amount, method, payment_status, tax]
     );
 
-    // Update booking payment_status to latest
-    await pool.query(
-      'UPDATE bookings SET payment_status = ? WHERE appointment_id = ?',
-      [payment_status, appointmentId]
-    );
+    await pool.query('UPDATE bookings SET payment_status = ? WHERE appointment_id = ?', [payment_status, appointmentId]);
 
-    // Send email notification (fetch customer details as needed)
+    // Fetch customer and real carwash name for email
     const [userRows] = await pool.query("SELECT first_name, last_name, email FROM users WHERE user_id = ?", [user_id]);
     const customer = userRows[0];
     if (customer) {
-      const carwashName = "Your Carwash Name"; // TODO: derive or pass carwash name
-      await sendPaymentEmail(customer.email, `${customer.first_name} ${customer.last_name}`, carwashName, payment_status, amount);
+      const carwashName = (await getCarwashNameByAppointment(appointmentId)) || "Carwash";
+      await sendPaymentEmail(
+        customer.email,
+        `${customer.first_name} ${customer.last_name}`,
+        carwashName,
+        payment_status,
+        amount
+      );
     }
 
     res.status(201).json({ success: true, message: 'Payment recorded.' });
@@ -104,27 +115,27 @@ exports.updatePayment = async (req, res) => {
     if (!payment_status) {
       const beforeTotal = await getTotalPaid(appointmentId);
       const afterTotal = beforeTotal + amount;
-      payment_status = 'Partial'; // or decide logic differently
+      payment_status = 'Partial';
     }
 
-    // Treat PATCH as “add another payment”
     await pool.query(
       'INSERT INTO payments (appointment_id, user_id, amount, method, receipt_url, payment_status) VALUES (?, ?, ?, ?, ?, ?)',
       [appointmentId, user_id, amount, method, receipt_url || null, payment_status]
     );
 
-    // Update booking payment_status to latest
-    await pool.query(
-      'UPDATE bookings SET payment_status = ? WHERE appointment_id = ?',
-      [payment_status, appointmentId]
-    );
+    await pool.query('UPDATE bookings SET payment_status = ? WHERE appointment_id = ?', [payment_status, appointmentId]);
 
-    // Send email notification (fetch customer details as needed)
     const [userRows] = await pool.query("SELECT first_name, last_name, email FROM users WHERE user_id = ?", [user_id]);
     const customer = userRows[0];
     if (customer) {
-      const carwashName = "Your Carwash Name"; // TODO: derive or pass carwash name
-      await sendPaymentEmail(customer.email, `${customer.first_name} ${customer.last_name}`, carwashName, payment_status, amount);
+      const carwashName = (await getCarwashNameByAppointment(appointmentId)) || "Carwash";
+      await sendPaymentEmail(
+        customer.email,
+        `${customer.first_name} ${customer.last_name}`,
+        carwashName,
+        payment_status,
+        amount
+      );
     }
 
     res.json({ success: true, message: 'Additional payment recorded.' });
@@ -138,10 +149,7 @@ exports.updatePayment = async (req, res) => {
 // Joins payments -> bookings (by appointment_id) and users (by user_id)
 exports.getPaymentsByApplication = async (req, res) => {
   const { applicationId } = req.params;
-
-  if (!applicationId) {
-    return res.status(400).json({ error: 'applicationId is required' });
-  }
+  if (!applicationId) return res.status(400).json({ error: 'applicationId is required' });
 
   try {
     const [rows] = await pool.query(
@@ -161,21 +169,22 @@ exports.getPaymentsByApplication = async (req, res) => {
           b.status AS booking_status,
           u.first_name AS customer_first_name,
           u.last_name AS customer_last_name,
-          u.email AS customer_email
+          u.email AS customer_email,
+          a.carwashName                       -- NEW
         FROM payments p
         JOIN bookings b ON p.appointment_id = b.appointment_id
         LEFT JOIN users u ON p.user_id = u.user_id
+        LEFT JOIN carwash_applications a ON a.applicationId = b.applicationId   -- NEW
        WHERE b.applicationId = ?
        ORDER BY p.appointment_id DESC`,
       [applicationId]
     );
 
-    // Also compute quick totals per application for convenience
     const [totals] = await pool.query(
       `SELECT 
           COALESCE(SUM(p.amount),0) AS total_amount,
           SUM(CASE WHEN p.payment_status = 'Refunded' THEN p.amount ELSE 0 END) AS total_refunded,
-          SUM(CASE WHEN p.payment_status IN ('Paid','Completed') THEN p.amount ELSE 0 END) AS total_paid
+          SUM(CASE WHEN p.payment_status IN ('Paid') THEN p.amount ELSE 0 END) AS total_paid
        FROM payments p
        JOIN bookings b ON p.appointment_id = b.appointment_id
       WHERE b.applicationId = ?`,
@@ -200,7 +209,7 @@ exports.getPaymentByAppointment = async (req, res) => {
   }
 };
 
-// GET: All payments of all services (for admin)
+// GET: All payments of all services (for admin) WITH shop name
 exports.getAllPayments = async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -213,11 +222,14 @@ exports.getAllPayments = async (req, res) => {
         p.receipt_url,
         p.payment_status,
         p.created_at AS date,
+        b.applicationId,                     -- NEW
         b.service_name,
         b.price AS booking_price,
-        b.status AS booking_status
+        b.status AS booking_status,
+        a.carwashName                         -- NEW
       FROM payments p
       JOIN bookings b ON p.appointment_id = b.appointment_id
+      LEFT JOIN carwash_applications a ON a.applicationId = b.applicationId   -- NEW
       ORDER BY p.payment_id DESC`
     );
     res.json(rows);

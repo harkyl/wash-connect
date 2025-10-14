@@ -1,4 +1,3 @@
-
 const pool = require('../db');
 const path = require('path');
 
@@ -57,19 +56,19 @@ exports.getApplicationByOwner = async (req, res) => {
 };
 
 exports.getApplicationById = async (req, res) => {
-	const { applicationId } = req.params;
+	const { id } = req.params;
 	try {
 		const [rows] = await pool.query(
-			'SELECT ownerId FROM carwash_applications WHERE applicationId = ? LIMIT 1',
-			[applicationId]
+			`SELECT applicationId, ownerId, carwashName, logo, status
+			 FROM carwash_applications
+			 WHERE applicationId = ?
+			 LIMIT 1`,
+			[id]
 		);
-		if (rows.length > 0) {
-			res.json(rows[0]);
-		} else {
-			res.status(404).json({ error: "No application found" });
-		}
-	} catch (error) {
-		res.status(500).json({ error: 'Failed to fetch application', details: error.message });
+		if (!rows[0]) return res.status(404).json({ error: "Application not found" });
+		res.json(rows[0]);
+	} catch (e) {
+		res.status(500).json({ error: "Failed to load application", details: e.message });
 	}
 };
 

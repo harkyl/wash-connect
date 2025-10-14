@@ -1,16 +1,16 @@
 import { Trophy, Eye, Users, FileText, Inbox, LogOut, UserCircle } from "lucide-react";
 import { Bar, Doughnut } from "react-chartjs-2";
-import { Chart, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from "chart.js";
-import { useState, useEffect } from "react";
+import Chart from "chart.js/auto"; // auto-registers all needed elements
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-Chart.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
 
 function getAnalytics(payments, refunds) {
-  const totalIncome = payments.reduce((sum, p) => sum + (p.amount > 0 ? Number(p.amount) : 0), 0);
-  const totalRefund = refunds.reduce((sum, r) => sum + (r.amount ? Number(r.amount) : 0), 0);
+  const totalIncome = payments.reduce((sum, p) => sum + (p?.amount ? Number(p.amount) : 0), 0);
+  const totalRefund = refunds.reduce((sum, r) => sum + (r?.amount ? Number(r.amount) : 0), 0);
   const byMethod = {};
   payments.forEach(p => {
-    byMethod[p.method] = (byMethod[p.method] || 0) + Number(p.amount);
+    const method = p?.method || "Unknown";
+    byMethod[method] = (byMethod[method] || 0) + (p?.amount ? Number(p.amount) : 0);
   });
   return { totalIncome, totalRefund, byMethod };
 }
@@ -19,6 +19,12 @@ function AdminDashboard() {
   const [payments, setPayments] = useState([]);
   const [refunds, setRefunds] = useState([]);
   const navigate = useNavigate();
+
+  // NEW: tab state
+  const [activeTab, setActiveTab] = useState("payments");
+
+  // NEW: map applicationId -> carwashName
+  const [appNames, setAppNames] = useState({});
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -59,6 +65,55 @@ function AdminDashboard() {
     // eslint-disable-next-line
   }, []);
 
+  // NEW: after payments load, fetch carwash names for each applicationId (fallback to fields in payments)
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const getAppId = (p) => p?.applicationId ?? p?.application_id ?? p?.app_id ?? null;
+
+    const uniqueIds = Array.from(
+      new Set(payments.map(getAppId).filter((v) => v !== null && v !== undefined))
+    );
+
+    if (uniqueIds.length === 0) {
+      setAppNames({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const entries = await Promise.all(
+          uniqueIds.map(async (id) => {
+            try {
+              const res = await fetch(`http://localhost:3000/api/applications/${id}`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+              });
+              if (!res.ok) return [id, undefined];
+              const data = await res.json();
+              const name =
+                data?.carwashName || data?.carwash_name || data?.name || undefined;
+              return [id, name];
+            } catch {
+              return [id, undefined];
+            }
+          })
+        );
+        if (cancelled) return;
+        const map = {};
+        entries.forEach(([id, name]) => {
+          if (name) map[id] = name;
+        });
+        setAppNames(map);
+      } catch {
+        if (!cancelled) setAppNames({});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [payments]);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -66,6 +121,59 @@ function AdminDashboard() {
   };
 
   const analytics = getAnalytics(payments, refunds);
+
+  // Helper: read many possible keys for applicationId from a payment row
+  const getAppId = (p) =>
+    p?.applicationId ??
+    p?.application_id ??
+    p?.applicationid ??
+    p?.appId ??
+    p?.app_id ??
+    null;
+
+  // Resolve shop name for a payment row
+  const shopNameForPayment = (p) =>
+    p?.carwashName ||
+    p?.carwash_name ||
+    (getAppId(p) ? appNames[getAppId(p)] : undefined) ||
+    "Unknown Shop";
+
+  // NEW: derive tax rows (Paid only), with computed tax and totals
+  const paidPayments = useMemo(
+    () => payments.filter(p => String(p?.payment_status || p?.status || "").toLowerCase() === "paid"),
+    [payments]
+  );
+  const taxRows = useMemo(
+    () => paidPayments.map(p => ({
+      ...p,
+      shop: shopNameForPayment(p),
+      tax: Number(p?.tax ?? (Number(p?.amount || 0) * 0.10)),
+    })),
+    [paidPayments, appNames]
+  );
+  const totalTax = useMemo(
+    () => taxRows.reduce((sum, r) => sum + (Number(r.tax) || 0), 0),
+    [taxRows]
+  );
+
+  // NEW: compute Top Selling Shop by count of Paid payments (tie-breaker: higher total amount)
+  const topShop = useMemo(() => {
+    const paid = payments.filter(
+      (p) => String(p?.payment_status || p?.status || "").toLowerCase() === "paid"
+    );
+    const agg = {};
+    for (const p of paid) {
+      const key = getAppId(p) ?? `name:${shopNameForPayment(p)}`;
+      const name = shopNameForPayment(p);
+      if (!agg[key]) agg[key] = { name, count: 0, amount: 0 };
+      agg[key].count += 1;
+      agg[key].amount += Number(p?.amount || 0);
+    }
+    const list = Object.values(agg);
+    if (list.length === 0) return null;
+    list.sort((a, b) => b.count - a.count || b.amount - a.amount);
+    return list[0];
+  }, [payments, appNames]);
 
   // Chart data
   const barData = {
@@ -88,12 +196,10 @@ function AdminDashboard() {
     ],
   };
 
-
-
   // Prepare tax by method for chart
   const taxByMethod = {};
   payments
-    .filter(p => p.payment_status === "Paid")
+    .filter(p => String(p?.payment_status || p?.status || "").toLowerCase() === "paid")
     .forEach(p => {
       const method = p.method || "Unknown";
       const tax = p.tax ? Number(p.tax) : Number(p.amount) * 0.10;
@@ -177,6 +283,24 @@ function AdminDashboard() {
         </header>
 
         <div className="p-10">
+          {/* NEW: Top Selling Shop card */}
+          <div className="bg-white rounded-xl shadow p-6 border border-gray-100 mb-8">
+            <h4 className="font-semibold mb-2">Top Selling Shop</h4>
+            {topShop ? (
+              <div className="text-gray-800">
+                <span className="text-lg font-bold">{topShop.name}</span>
+                <span className="ml-2 text-sm text-gray-600">
+                  • {topShop.count} paid {topShop.count === 1 ? "payment" : "payments"}
+                </span>
+                <span className="ml-2 text-sm text-gray-600">
+                  • ₱{topShop.amount.toLocaleString()}
+                </span>
+              </div>
+            ) : (
+              <div className="text-gray-500">No paid payments yet.</div>
+            )}
+          </div>
+
           {/* Analytical Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div className="bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col items-center">
@@ -215,41 +339,102 @@ function AdminDashboard() {
               </div>
             </div>
           </div>
-          {/* Payments Table */}
+          {/* Payments / Tax Tabs */}
           <div className="bg-white rounded-xl shadow p-8 border border-gray-100">
-            <h3 className="text-lg font-semibold mb-6">All Payments of Services</h3>
-            <div style={{ maxHeight: "340px", overflowY: "auto" }}>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-gray-500">
-                    <th className="py-2 text-left">Payment ID</th>
-                    <th className="py-2 text-left">Service</th>
-                    <th className="py-2 text-left">Amount</th>
-                    <th className="py-2 text-left">Date</th>
-                    <th className="py-2 text-left">Method</th>
-                    <th className="py-2 text-left">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center text-gray-400 py-4">No payments found.</td>
-                    </tr>
-                  ) : (
-                    payments.map((p) => (
-                      <tr key={p.payment_id} className="border-t">
-                        <td className="py-2">{p.payment_id}</td>
-                        <td className="py-2">{p.service_name}</td>
-                        <td className="py-2">₱{Number(p.amount).toLocaleString()}</td>
-                        <td className="py-2">{p.date ? p.date.slice(0, 16).replace("T", " ") : ""}</td>
-                        <td className="py-2">{p.method}</td>
-                        <td className="py-2">{p.payment_status || p.status}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold">Reports</h3>
+              <div className="flex gap-2">
+                <button
+                  className={`px-3 py-1 rounded-lg text-sm ${activeTab === "payments" ? "bg-cyan-600 text-white" : "bg-gray-100 text-gray-700"}`}
+                  onClick={() => setActiveTab("payments")}
+                >
+                  Payments
+                </button>
+                <button
+                  className={`px-3 py-1 rounded-lg text-sm ${activeTab === "tax" ? "bg-cyan-600 text-white" : "bg-gray-100 text-gray-700"}`}
+                  onClick={() => setActiveTab("tax")}
+                >
+                  Tax Collected
+                </button>
+              </div>
             </div>
+
+            {activeTab === "payments" ? (
+              // PAYMENTS TABLE (existing)
+              <div style={{ maxHeight: "340px", overflowY: "auto" }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-500">
+                      <th className="py-2 text-left">Payment ID</th>
+                      <th className="py-2 text-left">Shop</th>
+                      <th className="py-2 text-left">Amount</th>
+                      <th className="py-2 text-left">Date</th>
+                      <th className="py-2 text-left">Method</th>
+                      <th className="py-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center text-gray-400 py-4">No payments found.</td>
+                      </tr>
+                    ) : (
+                      payments.map((p) => (
+                        <tr key={p.payment_id} className="border-t">
+                          <td className="py-2">{p.payment_id}</td>
+                          <td className="py-2">{shopNameForPayment(p)}</td>
+                          <td className="py-2">₱{Number(p.amount).toLocaleString()}</td>
+                          <td className="py-2">{p.date ? String(p.date).slice(0, 16).replace("T", " ") : ""}</td>
+                          <td className="py-2">{p.method}</td>
+                          <td className="py-2">{p.payment_status || p.status}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              // TAX COLLECTED TAB
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-sm text-gray-700">
+                    Total Tax Collected (Paid): <span className="font-semibold">₱{totalTax.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div style={{ maxHeight: "340px", overflowY: "auto" }}>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-gray-500">
+                        <th className="py-2 text-left">Payment ID</th>
+                        <th className="py-2 text-left">Shop</th>
+                        <th className="py-2 text-left">Amount</th>
+                        <th className="py-2 text-left">Tax (10%)</th>
+                        <th className="py-2 text-left">Method</th>
+                        <th className="py-2 text-left">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {taxRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center text-gray-400 py-4">No paid transactions found.</td>
+                        </tr>
+                      ) : (
+                        taxRows.map((r) => (
+                          <tr key={r.payment_id} className="border-t">
+                            <td className="py-2">{r.payment_id}</td>
+                            <td className="py-2">{r.shop}</td>
+                            <td className="py-2">₱{Number(r.amount).toLocaleString()}</td>
+                            <td className="py-2">₱{Number(r.tax).toLocaleString()}</td>
+                            <td className="py-2">{r.method || "Unknown"}</td>
+                            <td className="py-2">{r.date ? String(r.date).slice(0, 16).replace("T", " ") : ""}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </main>
