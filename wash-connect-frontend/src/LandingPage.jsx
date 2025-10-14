@@ -1,6 +1,9 @@
 import { useState } from "react"
 import { useNavigate } from 'react-router-dom';
 import { Car, Droplets, Clock, Star, Users, Shield, ArrowRight, Menu, X } from "lucide-react"
+// Import from assets
+import carFoamImg from "./assets/car-foam.jpg";
+import motorcycleWashImg from "./assets/motorcycle-wash.jpg";
 
 function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -101,11 +104,18 @@ function LandingPage() {
               </div>
             </div>
             <div className="relative">
-              <img
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-PsUVBGJNoOXbX4UkDwIUXcPKTjqch7.png"
-                alt="Premium car"
-                className="w-full h-auto rounded-lg shadow-2xl"
-              />
+              {/* Use asset image (fixed responsive size) */}
+              <div className="w-full h-64 sm:h-80 md:h-96 lg:h-[28rem] rounded-lg overflow-hidden shadow-2xl">
+                <img
+                  src={carFoamImg}
+                  alt="Premium car wash with foam"
+                  className="w-full h-full object-cover"
+                  width={1200}
+                  height={800}
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  loading="eager"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -178,10 +188,12 @@ function LandingPage() {
               </div>
             </div>
             <div className="relative">
+              {/* Use asset image */}
               <img
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-06-05%20135705-AsZD5rUtFjj8dnL2iyOq9hohUe6q5a.png"
-                alt="Car wash service"
-                className="w-full h-auto rounded-lg shadow-2xl"
+                src={motorcycleWashImg}
+                alt="Motorcycle wash service"
+                className="w-full h-auto rounded-lg shadow-2xl object-cover"
+                loading="lazy"
               />
             </div>
           </div>
