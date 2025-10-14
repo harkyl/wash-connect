@@ -27,6 +27,8 @@ router.post(
 router.get('/carwash-applications/status/:ownerId', carwashApplicationController.getApplicationStatus);
 router.get('/carwash-applications/by-owner/:ownerId', carwashApplicationController.getApplicationByOwner);
 router.get('/carwash-applications/by-application/:applicationId', carwashApplicationController.getApplicationById);
+// Optional: alternate path
+router.get('/applications/:id', carwashApplicationController.getApplicationById);
 router.get('/carwash-applications/approved', carwashApplicationController.getApprovedApplications);
 router.get('/carwash-applications/approved-with-appointments', carwashApplicationController.getApprovedWithAppointments);
 

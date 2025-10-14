@@ -1,5 +1,4 @@
 const pool = require('../db');
-const path = require('path');
 
 exports.submitApplication = async (req, res) => {
 	const { ownerId, carwashName, location } = req.body;
@@ -56,14 +55,15 @@ exports.getApplicationByOwner = async (req, res) => {
 };
 
 exports.getApplicationById = async (req, res) => {
-	const { id } = req.params;
+	const applicationId = req.params.applicationId || req.params.id; // FIX: read applicationId
+	if (!applicationId) return res.status(400).json({ error: 'Missing applicationId' });
 	try {
 		const [rows] = await pool.query(
-			`SELECT applicationId, ownerId, carwashName, logo, status
+			`SELECT applicationId, ownerId, carwashName, logo, location, status, created_at, updated_at
 			 FROM carwash_applications
 			 WHERE applicationId = ?
 			 LIMIT 1`,
-			[id]
+			[applicationId]
 		);
 		if (!rows[0]) return res.status(404).json({ error: "Application not found" });
 		res.json(rows[0]);
