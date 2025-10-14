@@ -91,7 +91,7 @@ function BookingConfirmation() {
     }
     if (booking) loadOwnerPhone();
     return () => { ignore = true; };
-  }, [booking?.owner_id, booking?.ownerId, booking?.applicationId]);
+  }, [booking?.owner_id, booking?.ownerId, booking.applicationId, booking]);
 
   // Fetch personnel if not already set
   useEffect(() => {
