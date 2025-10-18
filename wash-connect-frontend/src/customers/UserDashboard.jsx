@@ -13,7 +13,7 @@ import {
   MessageCircle,
   MoreVertical,
 } from "lucide-react"
-import { FaEnvelope, FaUser, FaStar, FaHeart } from "react-icons/fa"
+import { FaEnvelope, FaUser, FaStar, FaHeart, FaCalendarAlt } from "react-icons/fa"
 
 // Helper: format birthday to YYYY-MM-DD, stripping time/UTC part
 const formatBirthday = (raw) => {
@@ -173,15 +173,15 @@ function UserDashboard() {
           </div>
           {/* Track Status Tab */}
           <div
-            className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-cyan-700 cursor-pointer"
+            className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-black cursor-pointer"
             onClick={() => navigate("/track-status")}
           >
-            <span className="text-xl">🔎</span>
-            <span className="text-gray-700">Track Status</span>
+            <span className="text-xl text-black">🔎</span>
+            <span className="text-black">Track Status</span>
           </div>
           {/* Appointment Tab */}
           <div
-            className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-cyan-700 cursor-pointer"
+            className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-black cursor-pointer"
             onClick={() => {
               const activeBooking = bookings.find(
                 (b) => !["Declined", "Cancelled", "Completed"].includes(b.status)
@@ -193,8 +193,8 @@ function UserDashboard() {
               }
             }}
           >
-            <span className="text-xl">🗓️</span>
-            <span className="text-gray-700">Appointment</span>
+            <FaCalendarAlt className="mr-3 w-5 h-5 text-black" />
+            <span className="text-black">Appointment</span>
           </div>
           <div className="mt-auto px-4 pt-8">
             <div className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer" onClick={handleLogout}>

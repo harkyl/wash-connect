@@ -229,7 +229,7 @@ function CarwashShopPage() {
             onClick={() => navigate("/track-status")}
           >
             <span className="text-xl">🔎</span>
-            <span className="text-gray-700 ml-2">Track Status</span>
+            <span className="text-gray-700">Track Status</span>
           </div>
           {/* Appointment Tab */}
           <div
@@ -250,7 +250,7 @@ function CarwashShopPage() {
               }
             }}
           >
-            <FaCalendarAlt className="mr-3 w-5 h-5" />
+            <FaCalendarAlt className="mr-3 w-5 h-5 text-black" />
             <span className="text-gray-700">Appointment</span>
           </div>
           <div className="mt-auto px-4 pt-8">

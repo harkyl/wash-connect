@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaEnvelope, FaUser, FaStar, FaHeart, FaCalendarAlt } from "react-icons/fa";
+import { FaEnvelope, FaUser, FaStar, FaHeart, FaCalendarAlt, FaSignOutAlt } from "react-icons/fa";
 import { toast, Toaster } from "react-hot-toast"; // Add this import if not present
 
 export default function TrackStatus() {
@@ -111,14 +111,14 @@ export default function TrackStatus() {
             }}
           >
             <FaCalendarAlt className="mr-3 w-5 h-5" />
-            Appointment
+            <span className="text-gray-700">Appointment</span>
           </div>
           <div className="mt-auto px-4 pt-8">
             <div
               className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer"
               onClick={handleLogout}
             >
-              <span className="text-xl">📁</span>
+              <FaSignOutAlt className="mr-3 w-5 h-5" />
               <span className="text-gray-700">LogOut</span>
             </div>
           </div>

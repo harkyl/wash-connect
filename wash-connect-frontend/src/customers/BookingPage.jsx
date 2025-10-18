@@ -245,7 +245,7 @@ function BookingPage() {
 							}
 						}}
 					>
-						<FaCalendarAlt className="mr-3 w-5 h-5" />
+						<FaCalendarAlt className="mr-3 w-5 h-5 text-black" />
 						<span className="text-gray-700">Appointment</span>
 					</div>
 					<div className="mt-auto px-4 pt-8">

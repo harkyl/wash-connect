@@ -5,6 +5,7 @@ function AdminUserManagement() {
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("All"); // NEW
 
   useEffect(() => {
     fetchCustomers();
@@ -23,26 +24,34 @@ function AdminUserManagement() {
   };
 
   // Filtered customers by search
-  const filtered = customers.filter(
-    (c) =>
-      c.first_name.toLowerCase().includes(search.toLowerCase()) ||
-      c.last_name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase()) ||
-      (c.address || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = customers
+    .filter(
+      (c) =>
+        c.first_name.toLowerCase().includes(search.toLowerCase()) ||
+        c.last_name.toLowerCase().includes(search.toLowerCase()) ||
+        c.email.toLowerCase().includes(search.toLowerCase()) ||
+        (c.address || "").toLowerCase().includes(search.toLowerCase())
+    )
+    .filter((c) => (statusFilter === "All" ? true : c.status === statusFilter)); // NEW
 
   // Stats
   const overallCount = customers.length;
   const activeCount = customers.filter((c) => c.status === "Active").length;
-  const reportedCount = customers.filter((c) => c.status === "Reported").length;
   const bannedCount = customers.filter((c) => c.status === "Banned").length;
 
   // Pagination state
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]); // NEW
+
   // Paginated customers
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const titleLabel = statusFilter === "All" ? "Overall Customer" : `${statusFilter} Customer`; // NEW
 
   return (
     <div className="min-h-screen flex bg-white">
@@ -111,22 +120,32 @@ function AdminUserManagement() {
 
         {/* Stats */}
         <div className="flex gap-4 px-10 pt-8">
-          <div className="bg-cyan-100 rounded-xl px-6 py-4 flex flex-col items-center min-w-[170px]">
+          <div
+            role="button"
+            onClick={() => setStatusFilter("All")}
+            className={`rounded-xl px-6 py-4 flex flex-col items-center min-w-[170px] cursor-pointer transition border
+              ${statusFilter === "All" ? "bg-cyan-50 border-cyan-300" : "bg-white border-gray-200 hover:ring-1 hover:ring-cyan-300"}`}
+          >
             <span className="text-sm text-gray-700">Overall Customer</span>
             <span className="text-3xl font-bold">{overallCount}</span>
             <span className="text-green-600 text-xs mt-1">↑ 2.5% Service performance this month</span>
           </div>
-          <div className="bg-white rounded-xl px-6 py-4 flex flex-col items-center min-w-[170px] border border-gray-200">
+          <div
+            role="button"
+            onClick={() => setStatusFilter("Active")}
+            className={`rounded-xl px-6 py-4 flex flex-col items-center min-w-[170px] cursor-pointer transition border
+              ${statusFilter === "Active" ? "bg-cyan-50 border-cyan-300" : "bg-white border-gray-200 hover:ring-1 hover:ring-cyan-300"}`}
+          >
             <span className="text-sm text-gray-700">Active Customer</span>
             <span className="text-3xl font-bold">{activeCount}</span>
             <span className="text-green-600 text-xs mt-1">↑ 2.1% Service performance this month</span>
           </div>
-          <div className="bg-white rounded-xl px-6 py-4 flex flex-col items-center min-w-[170px] border border-gray-200">
-            <span className="text-sm text-gray-700">Reported Customer</span>
-            <span className="text-3xl font-bold">{reportedCount}</span>
-            <span className="text-green-600 text-xs mt-1">↑ 2.1% Service performance this month</span>
-          </div>
-          <div className="bg-white rounded-xl px-6 py-4 flex flex-col items-center min-w-[170px] border border-gray-200">
+          <div
+            role="button"
+            onClick={() => setStatusFilter("Banned")}
+            className={`rounded-xl px-6 py-4 flex flex-col items-center min-w-[170px] cursor-pointer transition border
+              ${statusFilter === "Banned" ? "bg-cyan-50 border-cyan-300" : "bg-white border-gray-200 hover:ring-1 hover:ring-cyan-300"}`}
+          >
             <span className="text-sm text-gray-700">Banned Customer</span>
             <span className="text-3xl font-bold">{bannedCount}</span>
             <span className="text-green-600 text-xs mt-1">↑ 2.1% Service performance this month</span>
@@ -152,7 +171,7 @@ function AdminUserManagement() {
 
         {/* Customer Cards */}
         <div className="px-10 pb-10">
-          <h2 className="text-3xl font-bold mb-4">Overall Customer</h2>
+          <h2 className="text-3xl font-bold mb-4">{titleLabel}</h2>
           {loading ? (
             <div className="text-center text-gray-400 py-20">Loading...</div>
           ) : (
@@ -174,9 +193,6 @@ function AdminUserManagement() {
                         <div className="ml-auto">
                           {c.status === "Active" && (
                             <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Active</span>
-                          )}
-                          {c.status === "Reported" && (
-                            <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">Reported</span>
                           )}
                           {c.status === "Banned" && (
                             <span className="bg-red-200 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">Banned</span>

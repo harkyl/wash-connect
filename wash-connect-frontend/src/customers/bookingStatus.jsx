@@ -9,6 +9,7 @@ function BookingStatus() {
 
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [countdown, setCountdown] = useState(3); // NEW
 
   useEffect(() => {
     if (!appointment_id) return;
@@ -40,6 +41,25 @@ function BookingStatus() {
       return () => clearTimeout(timer);
     }
   }, [booking, navigate]);
+
+  // NEW: Countdown and redirect for Pending
+  useEffect(() => {
+    if (booking?.status !== "Pending") {
+      setCountdown(3);
+      return;
+    }
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          navigate("/user-dashboard");
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [booking?.status, navigate]);
 
   if (loading) {
     return (
@@ -90,6 +110,9 @@ function BookingStatus() {
           </div>
           <div className="mt-2 text-xs text-gray-500 text-center">
             Status: <span className="font-bold text-yellow-600">{booking.status}</span>
+          </div>
+          <div className="mt-3 text-sm text-gray-600">
+            Returning to dashboard in <span className="font-semibold">{countdown}</span>s...
           </div>
         </div>
       </div>
