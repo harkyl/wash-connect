@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaMapMarkerAlt, FaRegEnvelope, FaRegEye, FaRegCheckSquare, FaTrophy, FaRegFolderOpen } from "react-icons/fa"; // <-- Add FaRegFolderOpen
+import { FaMapMarkerAlt, FaRegEnvelope, FaRegEye, FaRegCheckSquare, FaTrophy, FaRegFolderOpen, FaPlay, FaFlagCheckered } from "react-icons/fa"; // + icons
 import { useNavigate, useLocation } from "react-router-dom";
 
 const TABS = [
@@ -147,24 +147,69 @@ function Bookings() {
       .catch(() => setBookings([]));
   }, [navigate]);
 
-  // Accept booking
+  // Update rules
+  const BLOCKED_STATUSES = new Set(["Declined", "Completed", "Refunded"]);
+  const canUpdate = (status) => status === "Confirmed" || status === "Halfway";
+  const nextOptionsFor = (status) => {
+    if (status === "Confirmed") return ["Halfway"];
+    if (status === "Halfway") return ["Completed"];
+    return [];
+  };
+
+  // Accept booking (still allowed from Pending)
   const handleAccept = async (id) => {
     const token = localStorage.getItem("token");
     await fetch(`http://localhost:3000/api/bookings/confirm/${id}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` }
-    });
+    }).catch(() => {});
     setBookings(prev => prev.map(b => b.appointment_id === id ? { ...b, status: "Confirmed" } : b));
   };
 
-  // Decline booking
+  // Decline booking (still allowed from Pending)
   const handleDecline = async (id) => {
     const token = localStorage.getItem("token");
     await fetch(`http://localhost:3000/api/bookings/decline/${id}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` }
-    });
+    }).catch(() => {});
     setBookings(prev => prev.filter(b => b.appointment_id !== id));
+  };
+
+  // Strict status updater: only Confirmed->Halfway, Halfway->Completed
+  const updateBookingStatus = async (id, newStatus) => {
+    const current = bookings.find(b => b.appointment_id === id);
+    if (!current) return;
+
+    // Blocked statuses cannot be updated
+    const BLOCKED_STATUSES = new Set(["Declined", "Completed", "Refunded"]);
+    if (BLOCKED_STATUSES.has(current.status)) return;
+
+    // Only allow from Confirmed or Halfway, and only to their next statuses
+    const canUpdate = (s) => s === "Confirmed" || s === "Halfway";
+    const nextOptionsFor = (s) => (s === "Confirmed" ? ["Halfway"] : s === "Halfway" ? ["Completed"] : []);
+    const allowedNext = nextOptionsFor(current.status);
+    if (!canUpdate(current.status) || !allowedNext.includes(newStatus)) return;
+
+    const token = localStorage.getItem("token");
+    // FIX: call the correct backend endpoint + payload
+    const res = await fetch(`http://localhost:3000/api/bookings/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ appointmentId: id, new_status: newStatus, reason: "" }),
+    });
+
+    if (!res.ok) {
+      console.error("Failed to update booking status", res.status);
+      return;
+    }
+
+    setBookings(prev =>
+      prev.map(b => (b.appointment_id === id ? { ...b, status: newStatus } : b))
+    );
   };
 
   // Filter bookings by tab (add completed logic)
@@ -212,95 +257,133 @@ function Bookings() {
             <div className="text-center text-gray-400">No bookings found.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredBookings.map(booking => (
-                <div key={booking.appointment_id} className="bg-white rounded-xl border border-gray-300 p-4 flex flex-col gap-2 shadow">
-                  <div className="flex items-center gap-3 mb-2">
-                    <img
-                      src={booking.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.customer_first_name || "")}`}
-                      alt=""
-                      className="w-12 h-12 rounded-full object-cover border"
-                    />
-                    <div>
-                      <div className="font-semibold text-lg">{booking.customer_first_name} {booking.customer_last_name}</div>
-                      <div className="text-xs text-gray-500">{booking.customer_email}</div>
+              {filteredBookings.map(booking => {
+                const status = booking.status;
+                const showQuickSelect = canUpdate(status);
+                const nextOptions = nextOptionsFor(status);
+
+                return (
+                  <div key={booking.appointment_id} className="bg-white rounded-xl border border-gray-300 p-4 flex flex-col gap-2 shadow">
+                    <div className="flex items-center gap-3 mb-2">
+                      <img
+                        src={booking.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.customer_first_name || "")}`}
+                        alt=""
+                        className="w-12 h-12 rounded-full object-cover border"
+                      />
+                      <div>
+                        <div className="font-semibold text-lg">{booking.customer_first_name} {booking.customer_last_name}</div>
+                        <div className="text-xs text-gray-500">{booking.customer_email}</div>
+                      </div>
+                      <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold ${
+                        status === "Pending" || status === "Pending Approval"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : status === "Approved"
+                          ? "bg-blue-100 text-blue-700"
+                          : status === "On Going"
+                          ? "bg-orange-100 text-orange-700"
+                          : status === "Halfway"
+                          ? "bg-purple-100 text-purple-700"
+                          : status === "Confirmed"
+                          ? "bg-green-100 text-green-700"
+                          : status === "Completed"
+                          ? "bg-gray-200 text-gray-700"
+                          : status === "Declined" || status === "Refunded"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}>
+                        {status}
+                      </span>
                     </div>
-                    <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold ${
-                      booking.status === "Pending" || booking.status === "Pending Approval"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : booking.status === "Approved"
-                        ? "bg-blue-100 text-blue-700"
-                        : booking.status === "On Going"
-                        ? "bg-orange-100 text-orange-700"
-                        : booking.status === "Confirmed"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}>
-                      {booking.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600 mb-1">
-                    <FaMapMarkerAlt className="mr-1" /> {booking.address}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600 mb-1">
-                    <span className="font-semibold">Service:</span>
-                    <span className="ml-1">{booking.service_name}</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600 mb-1">
-                    <span className="font-semibold">Date:</span>
-                    <span className="ml-1">
-                      {booking.schedule_date
-                        ? new Date(booking.schedule_date).toLocaleDateString()
-                        : "N/A"}
-                      {booking.schedule_time && (
-                        <span className="ml-2">
-                          | Time: {booking.schedule_time}
-                        </span>
+
+                    {/* Quick status dropdown: only for Confirmed/Halfway */}
+                    {showQuickSelect ? (
+                      <div className="mt-1">
+                        <select
+                          className="w-full border rounded p-1 text-xs"
+                          value={status}
+                          onChange={(e) => updateBookingStatus(booking.appointment_id, e.target.value)}
+                        >
+                          <option value={status} disabled>{status}</option>
+                          {nextOptions.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="mt-1">
+                        <select className="w-full border rounded p-1 text-xs bg-gray-50 text-gray-400" value={status} disabled>
+                          <option>{status}</option>
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="flex items-center text-sm text-gray-600 mb-1">
+                      <FaMapMarkerAlt className="mr-1" /> {booking.address}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 mb-1">
+                      <span className="font-semibold">Service:</span>
+                      <span className="ml-1">{booking.service_name}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 mb-1">
+                      <span className="font-semibold">Date:</span>
+                      <span className="ml-1">
+                        {booking.schedule_date
+                          ? new Date(booking.schedule_date).toLocaleDateString()
+                          : "N/A"}
+                        {booking.schedule_time && (
+                          <span className="ml-2">| Time: {booking.schedule_time}</span>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 mt-2">
+                      {(status === "Pending" || status === "Pending Approval") && (
+                        <>
+                          <button
+                            className="flex-1 bg-blue-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-blue-600"
+                            onClick={() => handleAccept(booking.appointment_id)}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            className="flex-1 bg-red-100 text-red-700 rounded px-3 py-1 text-xs font-medium hover:bg-red-600 hover:text-white"
+                            onClick={() => handleDecline(booking.appointment_id)}
+                          >
+                            Decline
+                          </button>
+                        </>
                       )}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    {booking.status === "On Going" && (
-                      <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
-                        On Going
-                      </span>
-                    )}
-                    {booking.payment_status === "Partial" && (
-                      <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">
-                        Partially Paid
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    {(booking.status === "Pending" || booking.status === "Pending Approval") && (
-                      <>
+
+                      {/* Only Confirmed and Halfway can be updated */}
+                      {status === "Confirmed" && (
                         <button
-                          className="flex-1 bg-blue-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-blue-600"
-                          onClick={() => handleAccept(booking.appointment_id)}
+                          className="flex-1 bg-yellow-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-yellow-600"
+                          onClick={() => updateBookingStatus(booking.appointment_id, "Halfway")}
                         >
-                          Accept
+                          Set Halfway
                         </button>
+                      )}
+
+                      {status === "Halfway" && (
                         <button
-                          className="flex-1 bg-red-100 text-red-700 rounded px-3 py-1 text-xs font-medium hover:bg-red-600 hover:text-white"
-                          onClick={() => handleDecline(booking.appointment_id)}
+                          className="flex-1 bg-green-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-green-600 flex items-center justify-center gap-1"
+                          onClick={() => updateBookingStatus(booking.appointment_id, "Completed")}
                         >
-                          Decline
+                          <FaFlagCheckered /> Complete
                         </button>
-                      </>
-                    )}
-                    {booking.status === "On Going" && (
-                      <button className="flex-1 bg-gray-200 text-gray-700 rounded px-3 py-1 text-xs font-medium">
-                        Done
-                      </button>
-                    )}
+                      )}
+                    </div>
+
+                    <button
+                      className="mt-2 text-blue-500 text-xs underline"
+                      onClick={() => setSelectedCustomer(booking.customer_id)}
+                    >
+                      View Details
+                    </button>
                   </div>
-                  <button
-                    className="mt-2 text-blue-500 text-xs underline"
-                    onClick={() => setSelectedCustomer(booking.customer_id)}
-                  >
-                    View Details
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {/* Modal for customer bookings */}
