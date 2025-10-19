@@ -248,6 +248,9 @@ function Bookings() {
     }
   };
 
+  // Do not show payment for these statuses
+  const HIDE_PAYMENT_FOR = new Set(["Cancelled", "Declined", "Canceled"]);
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
@@ -307,7 +310,7 @@ function Bookings() {
                       }`}>
                         {status}
                       </span>
-                      {booking.payment_status && (
+                      {booking.payment_status && !HIDE_PAYMENT_FOR.has(status) && (
                         <span className={`ml-2 px-3 py-1 rounded-full text-xs font-semibold ${paymentBadgeClass(booking.payment_status)}`}>
                           {booking.payment_status}
                         </span>
@@ -354,12 +357,14 @@ function Bookings() {
                         )}
                       </span>
                     </div>
-                    <div className="flex items-center text-sm text-gray-600 mb-1">
-                      <span className="font-semibold">Payment:</span>
-                      <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold ${paymentBadgeClass(booking.payment_status)}`}>
-                        {booking.payment_status || "N/A"}
-                      </span>
-                    </div>
+                    {!HIDE_PAYMENT_FOR.has(status) && (
+                      <div className="flex items-center text-sm text-gray-600 mb-1">
+                        <span className="font-semibold">Payment:</span>
+                        <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold ${paymentBadgeClass(booking.payment_status)}`}>
+                          {booking.payment_status || "N/A"}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex gap-2 mt-2">
@@ -437,12 +442,14 @@ function Bookings() {
                         )}
                       </div>
                       <div className="text-xs">{b.status}</div>
-                      <div className="text-xs mt-1">
-                        Payment:
-                        <span className={`ml-1 px-2 py-0.5 rounded ${paymentBadgeClass(b.payment_status)}`}>
-                          {b.payment_status || "N/A"}
-                        </span>
-                      </div>
+                      {!HIDE_PAYMENT_FOR.has(b.status) && (
+                        <div className="text-xs mt-1">
+                          Payment:
+                          <span className={`ml-1 px-2 py-0.5 rounded ${paymentBadgeClass(b.payment_status)}`}>
+                            {b.payment_status || "N/A"}
+                          </span>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
