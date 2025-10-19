@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Mail, Lock, Phone, MapPin, Eye, EyeOff } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import carwash3 from "../assets/carwash-3.jpg"; 
+
 function Register() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -90,12 +92,12 @@ function Register() {
         >
           <ArrowLeft className="w-6 h-6 text-black" />
         </button>
-        <div className="absolute bottom-0 left-0 right-0 flex justify-center items-end h-full">
+        {/* Full-bleed image */}
+        <div className="absolute inset-0">
           <img
-            src="motorcycle.png"
-            alt="Red motorcycle"
-            className="max-w-full max-h-full object-contain"
-            style={{ maxHeight: "80%" }}
+            src={carwash3}
+            alt="Motorbike being washed"
+            className="w-full h-full object-cover object-center pointer-events-none"
           />
         </div>
       </div>
