@@ -103,14 +103,6 @@ function PersonnelList() {
           >
             <span className="text-lg">★</span> Customers & Employee
           </button>
-          {/* NEW: Status Update below Customers & Employee */}
-          <button
-            className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 cursor-pointer transition-colors duration-200"
-            onClick={() => navigate("/status-update")}
-          >
-            <FaBars className="text-lg" />
-            <span>Status Update</span>
-          </button>
           <hr className="my-2 border-gray-300" />
           <button
             className="flex items-center gap-2 mb-1 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200 w-full text-left"
