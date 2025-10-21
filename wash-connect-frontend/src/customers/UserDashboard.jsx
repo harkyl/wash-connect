@@ -52,6 +52,19 @@ function UserDashboard() {
   const [profilePic, setProfilePic] = useState(null)
   const [bookings, setBookings] = useState([])
 
+  // NEW: edit state for Personal Information
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    contactNumber: "",
+    address: "",
+    birthday: "",
+    gender: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState({ type: "", text: "" });
   useEffect(() => {
     const token = localStorage.getItem("token")
     const user = localStorage.getItem("user")
@@ -143,6 +156,119 @@ function UserDashboard() {
     }
   }
 
+  // NEW: start editing populated from raw user in localStorage (keeps correct date format)
+  const startEditing = () => {
+    const raw = JSON.parse(localStorage.getItem("user") || "{}");
+    setEditForm({
+      firstName: raw.first_name ?? userInfo.firstName,
+      lastName: raw.last_name ?? userInfo.lastName,
+      email: raw.email ?? userInfo.email,
+      contactNumber: raw.phone ?? userInfo.contactNumber,
+      address: raw.address ?? userInfo.address,
+      birthday: formatDateOnly(raw.birth_date || raw.birthday || userInfo.birthday || ""),
+      gender: raw.gender ?? userInfo.gender,
+    });
+    setSaveMsg({ type: "", text: "" });
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setSaveMsg({ type: "", text: "" });
+  };
+
+  const handleSaveProfile = async () => {
+    setSaveMsg({ type: "", text: "" });
+
+    // simple validation
+    if (!editForm.firstName?.trim() || !editForm.lastName?.trim()) {
+      setSaveMsg({ type: "error", text: "First and last name are required." });
+      return;
+    }
+    if (!editForm.email?.includes("@")) {
+      setSaveMsg({ type: "error", text: "Enter a valid email." });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const stored = JSON.parse(localStorage.getItem("user") || "{}");
+      const userId = stored.id || stored.user_id;
+      const token = localStorage.getItem("token");
+      if (!userId || !token) {
+        setSaveMsg({ type: "error", text: "Not authorized. Please login again." });
+        return;
+      }
+
+      const payload = {
+        first_name: editForm.firstName?.trim(),
+        last_name: editForm.lastName?.trim(),
+        email: editForm.email?.trim(),
+        phone: editForm.contactNumber?.trim(),
+        address: editForm.address?.trim(),
+        birth_date: editForm.birthday || null,
+        gender: editForm.gender || "",
+      };
+
+      // Try PUT, then PATCH as fallback
+      const tryRequests = [
+        { method: "PUT", url: `http://localhost:3000/api/users/${userId}` },
+        { method: "PATCH", url: `http://localhost:3000/api/users/${userId}` },
+      ];
+
+      let updatedUser = null;
+      for (const req of tryRequests) {
+        const res = await fetch(req.url, {
+          method: req.method,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          try {
+            updatedUser = await res.json();
+          } catch {
+            updatedUser = null;
+          }
+          break;
+        }
+      }
+
+      // Merge and persist
+      const merged = {
+        ...stored,
+        ...(updatedUser || {}),
+        first_name: (updatedUser?.first_name ?? payload.first_name),
+        last_name: (updatedUser?.last_name ?? payload.last_name),
+        email: (updatedUser?.email ?? payload.email),
+        phone: (updatedUser?.phone ?? payload.phone),
+        address: (updatedUser?.address ?? payload.address),
+        birth_date: (updatedUser?.birth_date ?? payload.birth_date),
+        gender: (updatedUser?.gender ?? payload.gender),
+      };
+      localStorage.setItem("user", JSON.stringify(merged));
+
+      // Reflect to UI state
+      setUserInfo({
+        firstName: merged.first_name || "",
+        lastName: merged.last_name || "",
+        email: merged.email || "",
+        contactNumber: merged.phone || "",
+        address: merged.address || "",
+        birthday: formatBirthday(merged.birth_date || ""),
+        gender: merged.gender || "",
+      });
+
+      setSaveMsg({ type: "success", text: "Profile updated." });
+      setIsEditing(false);
+    } catch {
+      setSaveMsg({ type: "error", text: "Failed to update profile." });
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-cyan-50 to-blue-100">
       {/* Sidebar */}
@@ -362,53 +488,176 @@ function UserDashboard() {
 
               {/* User Details Section */}
               <div className="bg-white rounded-2xl p-8 shadow-xl">
-                <h3 className="text-lg font-bold text-gray-900 mb-6 border-b pb-2">Personal Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div>
-                    <label className="flex items-center text-sm text-gray-600 mb-2">
-                      <FaUser className="mr-2 text-cyan-400" /> First Name
-                    </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.firstName}</div>
+                <div className="flex items-center justify-between mb-6 border-b pb-2">
+                  <h3 className="text-lg font-bold text-gray-900">Personal Information</h3>
+                  {!isEditing ? (
+                    <button
+                      className="px-4 py-2 rounded-lg bg-cyan-500 text-white hover:bg-cyan-600 text-sm font-semibold"
+                      onClick={startEditing}
+                    >
+                      Edit
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-semibold"
+                        onClick={cancelEditing}
+                        disabled={saving}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="px-4 py-2 rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 text-sm font-semibold disabled:opacity-60"
+                        onClick={handleSaveProfile}
+                        disabled={saving}
+                      >
+                        {saving ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {saveMsg.text && (
+                  <div className={`mb-4 text-sm ${saveMsg.type === "success" ? "text-green-600" : "text-red-600"}`}>
+                    {saveMsg.text}
                   </div>
-                  <div>
-                    <label className="flex items-center text-sm text-gray-600 mb-2">
-                      <FaUser className="mr-2 text-cyan-400" /> Last Name
-                    </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.lastName}</div>
-                  </div>
-                  <div>
-                    <label className="flex items-center text-sm text-gray-600 mb-2">
-                      <FaEnvelope className="mr-2 text-cyan-400" /> Email Address
-                    </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.email}</div>
-                  </div>
-                  <div>
-                    <label className="flex items-center text-sm text-gray-600 mb-2">
-                      <Phone className="mr-2 text-cyan-400" /> Contact Number
-                    </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.contactNumber}</div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="flex items-center text-sm text-gray-600 mb-2">
-                      <Inbox className="mr-2 text-cyan-400" /> Address
-                    </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.address}</div>
-                  </div>
-                  <div>
-                    <label className="flex items-center text-sm text-gray-600 mb-2">
-                      <Calendar className="mr-2 text-cyan-400" /> Birthday
-                    </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">
-                      {formatBirthday(userInfo.birthday)} {/* <-- ensure no time displayed */}
+                )}
+
+                {!isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <FaUser className="mr-2 text-cyan-400" /> First Name
+                      </label>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.firstName}</div>
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <FaUser className="mr-2 text-cyan-400" /> Last Name
+                      </label>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.lastName}</div>
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <FaEnvelope className="mr-2 text-cyan-400" /> Email Address
+                      </label>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.email}</div>
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <Phone className="mr-2 text-cyan-400" /> Contact Number
+                      </label>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.contactNumber}</div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <Inbox className="mr-2 text-cyan-400" /> Address
+                      </label>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.address}</div>
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <Calendar className="mr-2 text-cyan-400" /> Birthday
+                      </label>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">
+                        {formatBirthday(userInfo.birthday)}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <User className="mr-2 text-cyan-400" /> Gender
+                      </label>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.gender}</div>
                     </div>
                   </div>
-                  <div>
-                    <label className="flex items-center text-sm text-gray-600 mb-2">
-                      <User className="mr-2 text-cyan-400" /> Gender
-                    </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-gray-800 font-medium">{userInfo.gender}</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <FaUser className="mr-2 text-cyan-400" /> First Name
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800"
+                        value={editForm.firstName}
+                        onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <FaUser className="mr-2 text-cyan-400" /> Last Name
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800"
+                        value={editForm.lastName}
+                        onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <FaEnvelope className="mr-2 text-cyan-400" /> Email Address
+                      </label>
+                      <input
+                        type="email"
+                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800"
+                        value={editForm.email}
+                        onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <Phone className="mr-2 text-cyan-400" /> Contact Number
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800"
+                        value={editForm.contactNumber}
+                        onChange={(e) => setEditForm((f) => ({ ...f, contactNumber: e.target.value }))}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <Inbox className="mr-2 text-cyan-400" /> Address
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800"
+                        value={editForm.address}
+                        onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <Calendar className="mr-2 text-cyan-400" /> Birthday
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800"
+                        value={editForm.birthday || ""}
+                        onChange={(e) => setEditForm((f) => ({ ...f, birthday: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center text-sm text-gray-600 mb-2">
+                        <User className="mr-2 text-cyan-400" /> Gender
+                      </label>
+                      <select
+                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800"
+                        value={editForm.gender || ""}
+                        onChange={(e) => setEditForm((f) => ({ ...f, gender: e.target.value }))}
+                      >
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

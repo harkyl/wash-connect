@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Mail, Calendar, User, Phone } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, User, Phone, CheckCircle } from "lucide-react";
 import { FaEnvelope, FaUser, FaStar, FaHeart, FaCalendarAlt, FaSignOutAlt, FaUndo } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -33,6 +33,12 @@ function BookingConfirmation() {
 
   // Use booking.appointment_id if available, else the one from location
   const apiAppointmentId = booking?.appointment_id || appointment_id;
+
+  // Normalize and compare statuses (handles case and spaces)
+  const normalizeStatus = (s) => String(s || "").toLowerCase().replace(/\s+/g, "");
+  const statusIs = (s, t) => normalizeStatus(s) === normalizeStatus(t);
+  const isActiveStatus = (s) =>
+    ["Confirmed", "On Going", "Halfway", "Completed"].some((t) => statusIs(s, t));
 
   // Helper to resolve carwash logo URL
   const placeholderLogo = "/default-logo.png";
@@ -174,7 +180,7 @@ function BookingConfirmation() {
 
   if (  
     !booking ||
-    !["Confirmed", "On Going", "halfway", "Completed"].includes(booking.status)
+    !isActiveStatus(booking.status)
   ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#c8f1ff]">
@@ -435,11 +441,11 @@ function BookingConfirmation() {
                   <div className="text-gray-600 text-sm">You'll receive a confirmation mail shortly!</div>
                 </div>
                 <span className={`ml-auto px-4 py-1 rounded-full font-semibold text-sm flex items-center ${
-                  booking.status === "Completed"
+                  statusIs(booking.status, "Completed")
                     ? "bg-green-100 text-green-700"
-                    : booking.status === "halfway"
+                    : statusIs(booking.status, "Halfway")   // covers "halfway" and "half way"
                     ? "bg-yellow-100 text-yellow-700"
-                    : booking.status === "On Going"
+                    : statusIs(booking.status, "On Going")
                     ? "bg-blue-100 text-blue-700"
                     : "bg-gray-100 text-gray-700"
                 }`}>
@@ -554,30 +560,43 @@ function BookingConfirmation() {
               </div>
             </div>
             {/* Service Checklist */}
-            <div className="bg-white rounded-xl shadow p-4 mb-4 border border-gray-200">
-              <div className="font-semibold mb-2">Service Checklist</div>
-              <div className="text-gray-700 text-sm">
-                See what all you should know or do while the carwashboy serve you.
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4">
+              <div className="px-5 py-3 border-b">
+                <div className="font-semibold">Service Checklist</div>
               </div>
-            </div>
-            {/* Need help */}
-            <div className="bg-white rounded-xl shadow p-4 mb-4 border border-gray-200 flex items-center justify-between">
-              <div>
-                <div className="font-semibold mb-1">Need our help?</div>
-                <div className="text-gray-700 text-sm">
-                  Call the carwash owner if you face any issue in our service
-                </div>
+
+              <ul className="p-5 space-y-3 text-sm text-gray-700">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                  Confirm your schedule date and time.
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                  Keep your phone reachable for updates from the carwash boy.
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                  Prepare vehicle and access if service is at your location.
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                  Settle any remaining balance after the service.
+                </li>
+              </ul>
+
+              <div className="px-5 pb-5">
+                <div className="text-xs text-gray-500 mb-2">Need our help?</div>
+                {ownerPhone ? (
+                  <a
+                    href={`tel:${ownerPhone}`}
+                    className="inline-flex items-center gap-2 px-3 py-2 border rounded bg-gray-100 hover:bg-gray-200 text-sm"
+                  >
+                    <Phone className="w-4 h-4" /> {ownerPhone}
+                  </a>
+                ) : (
+                  <div className="text-gray-500 text-sm">Phone not available</div>
+                )}
               </div>
-              {ownerPhone ? (
-                <a
-                  href={`tel:${ownerPhone}`}
-                  className="flex items-center gap-2 px-3 py-2 border rounded bg-gray-100 hover:bg-gray-200 text-sm"
-                >
-                  <Phone className="w-4 h-4" /> {ownerPhone}
-                </a>
-              ) : (
-                <div className="text-gray-500 text-sm">Phone not available</div>
-              )}
             </div>
           </div>
           {/* Right: Payment Summary */}

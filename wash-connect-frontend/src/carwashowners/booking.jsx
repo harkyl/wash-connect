@@ -113,8 +113,63 @@ function Bookings() {
   const [, setApplicationId] = useState(null);
   const navigate = useNavigate();
 
+  // Pagination state (10 per page)
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to first page when tab or data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, bookings]);
+
   // Helper to tolerate different booking id fields
   const getBookingId = (b) => b?.appointment_id || b?.id || b?.appointmentId || null;
+
+  // Parse schedule date/time to a Date
+  const parseDateTime = (dateStr, timeStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return null;
+
+    if (timeStr && typeof timeStr === "string") {
+      const t = timeStr.trim();
+      let m;
+      // e.g., 3:05 PM or 11:20:10 am
+      if ((m = t.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i))) {
+        let h = parseInt(m[1], 10);
+        const min = parseInt(m[2], 10);
+        const sec = m[3] ? parseInt(m[3], 10) : 0;
+        const ampm = m[4].toUpperCase();
+        if (ampm === "PM" && h < 12) h += 12;
+        if (ampm === "AM" && h === 12) h = 0;
+        d.setHours(h, min, sec, 0);
+      }
+      // e.g., 15:05 or 15:05:30
+      else if ((m = t.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/))) {
+        const h = parseInt(m[1], 10);
+        const min = parseInt(m[2], 10);
+        const sec = m[3] ? parseInt(m[3], 10) : 0;
+        d.setHours(h, min, sec, 0);
+      }
+    }
+    return d;
+  };
+
+  // Comparable timestamp for sorting (newest first)
+  const toComparableTs = (b) => {
+    const dt = parseDateTime(b?.schedule_date, b?.schedule_time);
+    if (dt) return dt.getTime();
+
+    const created = b?.created_at || b?.createdAt || b?.created_date || b?.createdDate;
+    if (created) {
+      const cdt = new Date(created);
+      if (!Number.isNaN(cdt.getTime())) return cdt.getTime();
+    }
+
+    // Fallback to numeric id
+    const id = Number(getBookingId(b));
+    return Number.isFinite(id) ? id : 0;
+  };
 
   // Fetch booking detail (try personnel-rich endpoint first, then fallback)
   const fetchBookingDetail = async (appointmentId, token) => {
@@ -214,14 +269,17 @@ function Bookings() {
   }, [navigate]);
 
   const BLOCKED_STATUSES = new Set(["Declined", "Completed", "Refunded"]);
-  const canUpdate = (status) => status === "Confirmed" || status === "Halfway";
+  const canUpdate = (status) => status === "Confirmed" || status === "On Going" || status === "Halfway";
+
   const nextOptionsFor = (status) => {
-    if (status === "Confirmed") return ["Halfway"];
+    if (status === "Confirmed") return ["On Going"];
+    if (status === "On Going") return ["Halfway"];
     if (status === "Halfway") return ["Completed"];
     return [];
   };
 
   const handleAccept = async (id) => {
+    if (!id) return;
     const token = localStorage.getItem("token");
     if (!token) return;
     await fetch(`http://localhost:3000/api/bookings/confirm/${id}`, {
@@ -236,10 +294,13 @@ function Bookings() {
       if (det) {
         setBookings(prev => prev.map(b => (getBookingId(b) === id ? { ...b, ...det } : b)));
       }
-    } catch {}
+    } catch {
+      // Intentionally left empty
+    }
   };
 
   const handleDecline = async (id) => {
+    if (!id) return;
     const token = localStorage.getItem("token");
     if (!token) return;
     await fetch(`http://localhost:3000/api/bookings/decline/${id}`, {
@@ -254,10 +315,13 @@ function Bookings() {
       if (det) {
         setBookings(prev => prev.map(b => (getBookingId(b) === id ? { ...b, ...det } : b)));
       }
-    } catch {}
+    } catch {
+      // Intentionally left empty
+    }
   };
 
   const updateBookingStatus = async (id, newStatus) => {
+    if (!id) return;
     const current = bookings.find(b => getBookingId(b) === id);
     if (!current) return;
 
@@ -311,6 +375,7 @@ function Bookings() {
 
   const HIDE_PAYMENT_FOR = new Set(["Cancelled", "Declined", "Canceled"]);
 
+  // Filter then sort (newest first), then paginate
   const filteredBookings = bookings.filter(b => {
     if (activeTab === "overall") return true;
     if (activeTab === "pending") return b.status === "Pending" || b.status === "Pending Approval";
@@ -320,6 +385,14 @@ function Bookings() {
     if (activeTab === "completed") return b.status === "Completed";
     return true;
   });
+
+  const sortedBookings = [...filteredBookings].sort((a, b) => toComparableTs(b) - toComparableTs(a));
+
+  const totalPages = Math.max(1, Math.ceil(sortedBookings.length / PAGE_SIZE));
+  const page = Math.min(currentPage, totalPages);
+  const startIdx = (page - 1) * PAGE_SIZE;
+  const endIdx = startIdx + PAGE_SIZE;
+  const paginatedBookings = sortedBookings.slice(startIdx, endIdx);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -342,163 +415,205 @@ function Bookings() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-8">
-          {filteredBookings.length === 0 ? (
+          {paginatedBookings.length === 0 ? (
             <div className="text-center text-gray-400">No bookings found.</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredBookings.map(booking => {
-                const status = booking.status;
-                const showQuickSelect = canUpdate(status);
-                const nextOptions = nextOptionsFor(status);
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedBookings.map((booking, idx) => {
+                  const status = booking.status;
+                  const showQuickSelect = canUpdate(status);
+                  const nextOptions = nextOptionsFor(status);
 
-                // Determine attendant fields (merged from booking detail if available)
-                const attendantName = booking.assigned_employee_name || booking.carwash_boy_name || booking.attendant_name || (booking.personnel_first_name ? `${booking.personnel_first_name} ${booking.personnel_last_name || ""}`.trim() : "") || "";
-                const attendantContact = booking.assigned_employee_contact || booking.carwash_boy_contact || booking.attendant_contact || booking.personnel_email || "";
+                  // Determine attendant fields (merged from booking detail if available)
+                  const attendantName = booking.assigned_employee_name || booking.carwash_boy_name || booking.attendant_name || (booking.personnel_first_name ? `${booking.personnel_first_name} ${booking.personnel_last_name || ""}`.trim() : "") || "";
+                  const attendantContact = booking.assigned_employee_contact || booking.carwash_boy_contact || booking.attendant_contact || booking.personnel_email || "";
 
-                const bid = getBookingId(booking) || `tmp-${Math.random()}`;
+                  const id = getBookingId(booking);
+                  const key = id ?? `pg-${page}-row-${idx}`;
 
-                return (
-                  <div key={bid} className="bg-white rounded-xl border border-gray-300 p-4 flex flex-col gap-2 shadow">
-                    <div className="flex items-center gap-3 mb-2">
-                      <img
-                        src={booking.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.customer_first_name || "")}`}
-                        alt=""
-                        className="w-12 h-12 rounded-full object-cover border"
-                      />
-                      <div>
-                        <div className="font-semibold text-lg">{booking.customer_first_name} {booking.customer_last_name}</div>
-                        <div className="text-xs text-gray-500">{booking.customer_email}</div>
-                      </div>
+                  return (
+                    <div key={key} className="bg-white rounded-xl border border-gray-300 p-4 flex flex-col gap-2 shadow">
+                      <div className="flex items-center gap-3 mb-2">
+                        <img
+                          src={booking.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.customer_first_name || "")}`}
+                          alt=""
+                          className="w-12 h-12 rounded-full object-cover border"
+                        />
+                        <div>
+                          <div className="font-semibold text-lg">{booking.customer_first_name} {booking.customer_last_name}</div>
+                          <div className="text-xs text-gray-500">{booking.customer_email}</div>
+                        </div>
 
-                      <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold ${
-                        status === "Pending" || status === "Pending Approval"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : status === "Approved"
-                          ? "bg-blue-100 text-blue-700"
-                          : status === "On Going"
-                          ? "bg-orange-100 text-orange-700"
-                          : status === "Halfway"
-                          ? "bg-purple-100 text-purple-700"
-                          : status === "Confirmed"
-                          ? "bg-green-100 text-green-700"
-                          : status === "Completed"
-                          ? "bg-gray-200 text-gray-700"
-                          : status === "Declined" || status === "Refunded"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gray-100 text-gray-500"
-                      }`}>
-                        {status}
-                      </span>
-
-                      {booking.payment_status && !HIDE_PAYMENT_FOR.has(status) && (
-                        <span className={`ml-2 px-3 py-1 rounded-full text-xs font-semibold ${paymentBadgeClass(booking.payment_status)}`}>
-                          {booking.payment_status}
+                        <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold ${
+                          status === "Pending" || status === "Pending Approval"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : status === "Approved"
+                            ? "bg-blue-100 text-blue-700"
+                            : status === "On Going"
+                            ? "bg-orange-100 text-orange-700"
+                            : status === "Halfway"
+                            ? "bg-purple-100 text-purple-700"
+                            : status === "Confirmed"
+                            ? "bg-green-100 text-green-700"
+                            : status === "Completed"
+                            ? "bg-gray-200 text-gray-700"
+                            : status === "Declined" || status === "Refunded"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-gray-100 text-gray-500"
+                        }`}>
+                          {status}
                         </span>
-                      )}
-                    </div>
 
-                    {showQuickSelect ? (
-                      <div className="mt-1">
-                        <select
-                          className="w-full border rounded p-1 text-xs"
-                          value={status}
-                          onChange={(e) => updateBookingStatus(bid, e.target.value)}
-                        >
-                          <option value={status} disabled>{status}</option>
-                          {nextOptions.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : (
-                      <div className="mt-1">
-                        <select className="w-full border rounded p-1 text-xs bg-gray-50 text-gray-400" value={status} disabled>
-                          <option>{status}</option>
-                        </select>
-                      </div>
-                    )}
-
-                    <div className="flex items-center text-sm text-gray-600 mb-1">
-                      <FaMapMarkerAlt className="mr-1" /> {booking.address}
-                    </div>
-
-                    <div className="flex flex-col text-sm text-gray-600 mb-1">
-                      <div>
-                        <span className="font-semibold">Service:</span>
-                        <span className="ml-1">{booking.service_name}</span>
-                      </div>
-
-                      {/* Display assigned carwash boy (attendant) directly under service */}
-                      <div className="mt-1">
-                        <span className="font-semibold">Attendant:</span>
-                        {attendantName ? (
-                          <span className="ml-2 text-sm text-gray-700">
-                            {attendantName}
-                            {attendantContact && <span className="ml-2 text-xs text-gray-500">| {attendantContact}</span>}
+                        {booking.payment_status && !HIDE_PAYMENT_FOR.has(status) && (
+                          <span className={`ml-2 px-3 py-1 rounded-full text-xs font-semibold ${paymentBadgeClass(booking.payment_status)}`}>
+                            {booking.payment_status}
                           </span>
-                        ) : (
-                          <span className="ml-2 text-sm text-gray-500">No attendant assigned yet.</span>
+                        )}
+                      </div>
+
+                      {showQuickSelect ? (
+                        <div className="mt-1">
+                          <select
+                            className="w-full border rounded p-1 text-xs"
+                            value={status}
+                            onChange={(e) => id && updateBookingStatus(id, e.target.value)}
+                            disabled={!id}
+                          >
+                            <option value={status} disabled>{status}</option>
+                            {nextOptions.map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="mt-1">
+                          <select className="w-full border rounded p-1 text-xs bg-gray-50 text-gray-400" value={status} disabled>
+                            <option>{status}</option>
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="flex items-center text-sm text-gray-600 mb-1">
+                        <FaMapMarkerAlt className="mr-1" /> {booking.address}
+                      </div>
+
+                      <div className="flex flex-col text-sm text-gray-600 mb-1">
+                        <div>
+                          <span className="font-semibold">Service:</span>
+                          <span className="ml-1">{booking.service_name}</span>
+                        </div>
+
+                        {/* Display assigned carwash boy (attendant) directly under service */}
+                        <div className="mt-1">
+                          <span className="font-semibold">Attendant:</span>
+                          {attendantName ? (
+                            <span className="ml-2 text-sm text-gray-700">
+                              {attendantName}
+                              {attendantContact && <span className="ml-2 text-xs text-gray-500">| {attendantContact}</span>}
+                            </span>
+                          ) : (
+                            <span className="ml-2 text-sm text-gray-500">No attendant assigned yet.</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center text-sm text-gray-600 mb-1">
+                        <span className="font-semibold">Date:</span>
+                        <span className="ml-1">
+                          {booking.schedule_date ? new Date(booking.schedule_date).toLocaleDateString() : "N/A"}
+                          {booking.schedule_time && <span className="ml-2">| Time: {booking.schedule_time}</span>}
+                        </span>
+                      </div>
+
+                      {!HIDE_PAYMENT_FOR.has(status) && (
+                        <div className="flex items-center text-sm text-gray-600 mb-1">
+                          <span className="font-semibold">Payment:</span>
+                          <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold ${paymentBadgeClass(booking.payment_status)}`}>
+                            {booking.payment_status || "N/A"}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 mt-2">
+                        {(status === "Pending" || status === "Pending Approval") && (
+                          <>
+                            <button
+                              className="flex-1 bg-blue-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-blue-600 disabled:opacity-50"
+                              onClick={() => id && handleAccept(id)}
+                              disabled={!id}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              className="flex-1 bg-red-100 text-red-700 rounded px-3 py-1 text-xs font-medium hover:bg-red-600 hover:text-white disabled:opacity-50"
+                              onClick={() => id && handleDecline(id)}
+                              disabled={!id}
+                            >
+                              Decline
+                            </button>
+                          </>
+                        )}
+
+                        {status === "Confirmed" && (
+                          <button
+                            className="flex-1 bg-orange-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-orange-600 disabled:opacity-50"
+                            onClick={() => id && updateBookingStatus(id, "On Going")}
+                            disabled={!id}
+                          >
+                            Start On Going
+                          </button>
+                        )}
+
+                        {status === "On Going" && (
+                          <button
+                            className="flex-1 bg-yellow-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-yellow-600 disabled:opacity-50"
+                            onClick={() => id && updateBookingStatus(id, "Halfway")}
+                            disabled={!id}
+                          >
+                            Set Halfway
+                          </button>
+                        )}
+
+                        {status === "Halfway" && (
+                          <button
+                            className="flex-1 bg-green-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-green-600 flex items-center justify-center gap-1 disabled:opacity-50"
+                            onClick={() => id && updateBookingStatus(id, "Completed")}
+                            disabled={!id}
+                          >
+                            <FaFlagCheckered /> Complete
+                          </button>
                         )}
                       </div>
                     </div>
+                  );
+                })}
+              </div>
 
-                    <div className="flex items-center text-sm text-gray-600 mb-1">
-                      <span className="font-semibold">Date:</span>
-                      <span className="ml-1">
-                        {booking.schedule_date ? new Date(booking.schedule_date).toLocaleDateString() : "N/A"}
-                        {booking.schedule_time && <span className="ml-2">| Time: {booking.schedule_time}</span>}
-                      </span>
-                    </div>
-
-                    {!HIDE_PAYMENT_FOR.has(status) && (
-                      <div className="flex items-center text-sm text-gray-600 mb-1">
-                        <span className="font-semibold">Payment:</span>
-                        <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold ${paymentBadgeClass(booking.payment_status)}`}>
-                          {booking.payment_status || "N/A"}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 mt-2">
-                      {(status === "Pending" || status === "Pending Approval") && (
-                        <>
-                          <button
-                            className="flex-1 bg-blue-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-blue-600"
-                            onClick={() => handleAccept(bid)}
-                          >
-                            Accept
-                          </button>
-                          <button
-                            className="flex-1 bg-red-100 text-red-700 rounded px-3 py-1 text-xs font-medium hover:bg-red-600 hover:text-white"
-                            onClick={() => handleDecline(bid)}
-                          >
-                            Decline
-                          </button>
-                        </>
-                      )}
-
-                      {status === "Confirmed" && (
-                        <button
-                          className="flex-1 bg-yellow-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-yellow-600"
-                          onClick={() => updateBookingStatus(bid, "Halfway")}
-                        >
-                          Set Halfway
-                        </button>
-                      )}
-
-                      {status === "Halfway" && (
-                        <button
-                          className="flex-1 bg-green-500 text-white rounded px-3 py-1 text-xs font-medium hover:bg-green-600 flex items-center justify-center gap-1"
-                          onClick={() => updateBookingStatus(bid, "Completed")}
-                        >
-                          <FaFlagCheckered /> Complete
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+              {/* Pagination controls */}
+              <div className="flex items-center justify-between mt-6">
+                <div className="text-sm text-gray-600">
+                  Showing {sortedBookings.length === 0 ? 0 : startIdx + 1}-{Math.min(endIdx, sortedBookings.length)} of {sortedBookings.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                  >
+                    Prev
+                  </button>
+                  <span className="text-sm text-gray-700">Page {page} of {totalPages}</span>
+                  <button
+                    className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

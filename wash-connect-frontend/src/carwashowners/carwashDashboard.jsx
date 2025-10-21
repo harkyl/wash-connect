@@ -17,6 +17,9 @@ export default function CarwashDashboard() {
     const [reviews, setReviews] = useState([]); // <-- Use state for reviews
     const [editSvc, setEditSvc] = useState(null); // Add this state for editing
     const navigate = useNavigate();
+    // NEW: selected booking for details modal
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [customerContact, setCustomerContact] = useState(""); // NEW
 
   useEffect(() => {
         const fetchData = async () => {
@@ -500,7 +503,13 @@ export default function CarwashDashboard() {
                             <span className="truncate">{booking.customer_email}</span>
                           </div>
                           <div className="flex gap-2 mt-2">
-                            <button className="flex-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                            <button
+                              className="flex-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium"
+                              onClick={() => {
+                                setSelectedBooking(booking);
+                                setCustomerContact(extractContact(booking) || ""); // NEW: prefill
+                              }}
+                            >
                               View Details
                             </button>
                             {/* Show Confirm/Decline ONLY if status is Pending */}
@@ -886,6 +895,105 @@ export default function CarwashDashboard() {
           </div>
         </div>
       )}
+
+      {/* NEW: Booking Details Modal */}
+      {selectedBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div className="flex items-center gap-3">
+                <img
+                  src={
+                    selectedBooking.avatar
+                      ? selectedBooking.avatar
+                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedBooking.customer_name || "Customer")}`
+                  }
+                  alt=""
+                  className="w-12 h-12 rounded-full object-cover border"
+                />
+                <div>
+                  <div className="font-semibold text-lg">
+                    {selectedBooking.customer_name || `${selectedBooking.customer_first_name || ""} ${selectedBooking.customer_last_name || ""}`.trim() || "Customer"}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    ID: {getAppointmentId(selectedBooking) ?? "N/A"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+                  {selectedBooking.status || "Pending"}
+                </span>
+                {selectedBooking.payment_status && (
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                    {selectedBooking.payment_status}
+                  </span>
+                )}
+                <button
+                  className="ml-2 text-gray-500 hover:text-gray-800"
+                  onClick={() => setSelectedBooking(null)}
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <div className="text-gray-500">Email</div>
+                <div className="font-medium">{selectedBooking.customer_email || "N/A"}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Contact</div>
+                <div className="font-medium">{customerContact || "N/A"}</div> {/* CHANGED */}
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-gray-500">Address</div>
+                <div className="font-medium">{selectedBooking.address || "N/A"}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Service</div>
+                <div className="font-medium">{selectedBooking.service_name || "N/A"}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Scheduled</div>
+                <div className="font-medium">
+                  {selectedBooking.schedule_date
+                    ? new Date(selectedBooking.schedule_date).toLocaleDateString()
+                    : "N/A"}
+                  {selectedBooking.schedule_time && (
+                    <span className="ml-2">| {selectedBooking.schedule_time}</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-500">Created</div>
+                <div className="font-medium">
+                  {selectedBooking.created_at
+                    ? `${new Date(selectedBooking.created_at).toLocaleDateString()} ${new Date(selectedBooking.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : "N/A"}
+                </div>
+              </div>
+              {selectedBooking.notes && (
+                <div className="md:col-span-2">
+                  <div className="text-gray-500">Notes</div>
+                  <div className="font-medium whitespace-pre-wrap">{selectedBooking.notes}</div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t flex items-center justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
+                onClick={() => setSelectedBooking(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 		</div>
 	);
 }
@@ -893,3 +1001,13 @@ export default function CarwashDashboard() {
 
 // Helper to get a booking's appointment id regardless of field name differences
 const getAppointmentId = (b) => b?.appointment_id ?? b?.appointmentId ?? b?.id ?? null;
+
+// NEW: extract any contact-like field from an object
+const extractContact = (obj) =>
+  obj?.customer_phone ??
+  obj?.customer_contact ??
+  obj?.contact ??
+  obj?.phone ??
+  obj?.user_phone ??
+  obj?.mobile ??
+  null;
