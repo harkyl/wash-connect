@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const customers = require('../Controller/customersController');
+const customerController = require('../Controller/customersController');
 
-router.get('/customers/by-application/:applicationId', customers.getCustomersByApplication);
+// GET /api/customers/by-application/:applicationId
+router.get('/by-application/:applicationId', customerController.getCustomersByApplication);
 
 module.exports = router;

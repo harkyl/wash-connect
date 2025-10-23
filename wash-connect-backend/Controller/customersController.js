@@ -6,21 +6,30 @@ exports.getCustomersByApplication = async (req, res) => {
   if (!applicationId) return res.status(400).json({ error: 'Missing applicationId' });
 
   try {
+    // Aggregate completed bookings per user in a subquery, then join user profile fields.
     const [rows] = await pool.query(
-      `SELECT 
-         b.user_id,
-         u.first_name  AS customer_first_name,
-         u.last_name   AS customer_last_name,
-         u.email       AS customer_email,
-         u.address,
-         u.avatar      AS avatar,
-         COUNT(*)      AS completedBookings,
-         MAX(COALESCE(b.updated_at, b.created_at)) AS latest_completed_booking
-       FROM bookings b
-       LEFT JOIN users u ON u.user_id = b.user_id
-       WHERE b.applicationId = ?
-         AND LOWER(b.status) IN ('completed','done')
-       GROUP BY b.user_id`,
+      `
+      SELECT
+        cb.user_id,
+        u.first_name  AS customer_first_name,
+        u.last_name   AS customer_last_name,
+        u.email       AS customer_email,
+        u.address,
+        u.avatar      AS avatar,
+        cb.completedBookings,
+        cb.latest_completed_booking
+      FROM (
+        SELECT 
+          b.user_id,
+          COUNT(*) AS completedBookings,
+          MAX(COALESCE(b.updated_at, b.created_at)) AS latest_completed_booking
+        FROM bookings b
+        WHERE b.applicationId = ?
+          AND LOWER(b.status) IN ('completed','done')
+        GROUP BY b.user_id
+      ) AS cb
+      LEFT JOIN users u ON u.user_id = cb.user_id
+      `,
       [applicationId]
     );
 
@@ -39,6 +48,7 @@ exports.getCustomersByApplication = async (req, res) => {
 
     res.json(data);
   } catch (e) {
+    console.error('getCustomersByApplication error:', e);
     res.status(500).json({ error: 'Failed to load customers', details: e.message });
   }
-};  
+};

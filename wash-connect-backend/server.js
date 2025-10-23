@@ -28,7 +28,7 @@ const reviewsRoutes = require('./routes/reviews'); // Add this line
 const forgotPasswordRoutes = require('./routes/forgotpassword'); // Add this line
 const resetPasswordRoutes = require('./routes/resetpassword'); // Add this line
 const ownersRoutes = require('./routes/owners'); // Add this line
-const customerRoutes = require('./routes/customers');
+const customersRoutes = require('./routes/customers');
 const userRoutes = require('./routes/user');
 
 const app = express();
@@ -60,7 +60,7 @@ app.use('/api', reviewsRoutes); // Add this line
 app.use('/api/forgot-password', forgotPasswordRoutes); // Add this line
 app.use('/api/reset-password', resetPasswordRoutes); // Add this line
 app.use('/api', ownersRoutes); // Add this line
-app.use('/api', customerRoutes); // Add this line
+app.use('/api/customers', customersRoutes); // Add this line
 app.use('/api/users', userRoutes);
 
 //admin
