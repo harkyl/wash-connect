@@ -1,6 +1,5 @@
 const pool = require('../db');
 
-// GET /api/customers/by-application/:applicationId
 // One row per customer with completedBookings and status (Repeat/New)
 exports.getCustomersByApplication = async (req, res) => {
   const { applicationId } = req.params;
@@ -42,4 +41,4 @@ exports.getCustomersByApplication = async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'Failed to load customers', details: e.message });
   }
-};
+};  

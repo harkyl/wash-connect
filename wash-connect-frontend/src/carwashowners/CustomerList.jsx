@@ -78,6 +78,8 @@ function CustomerList() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("date");
   const navigate = useNavigate();
+  // NEW: filter by stat box
+  const [statusFilter, setStatusFilter] = useState("all"); // all | new | repeat
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -135,13 +137,22 @@ function CustomerList() {
 
   // Filter and sort customers
   const filtered = customers
+    // exclude blocked first
+    .filter(c => c.status !== "Blocked")
+    // NEW: apply stat filter
+    .filter(c => {
+      if (statusFilter === "new") return c.status === "New Customer";
+      if (statusFilter === "repeat") return c.status === "Repeat Customer";
+      return true; // all
+    })
+    // search
     .filter(c =>
       (c.customer_name || `${c.customer_first_name || ""} ${c.customer_last_name || ""}`)
         .toLowerCase()
         .includes(search.toLowerCase()) ||
       (c.customer_email || "").toLowerCase().includes(search.toLowerCase())
     )
-    .filter(c => c.status !== "Blocked")
+    // sort
     .sort((a, b) => {
       if (sort === "date") return new Date(b.latest_for_sort) - new Date(a.latest_for_sort);
       if (sort === "name")
@@ -255,20 +266,40 @@ function CustomerList() {
             </div>
           </div>
           <div className="flex gap-4 mt-2">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-6 py-3 flex flex-col items-center">
+            <button
+              className={`rounded-lg px-6 py-3 flex flex-col items-center border transition
+                ${statusFilter === "all" ? "bg-blue-600 text-white border-blue-600"
+                                         : "bg-blue-50 border-blue-200 text-gray-900"}`}
+              onClick={() => setStatusFilter("all")}
+              aria-pressed={statusFilter === "all"}
+            >
               <span className="text-2xl font-bold">
                 {customers.filter(c => c.status !== "Blocked").length}
               </span>
-              <span className="text-xs text-gray-500">Total Customer</span>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-6 py-3 flex flex-col items-center">
+              <span className="text-xs opacity-80">Total Customer</span>
+            </button>
+
+            <button
+              className={`rounded-lg px-6 py-3 flex flex-col items-center border transition
+                ${statusFilter === "new" ? "bg-blue-600 text-white border-blue-600"
+                                         : "bg-blue-50 border-blue-200 text-gray-900"}`}
+              onClick={() => setStatusFilter("new")}
+              aria-pressed={statusFilter === "new"}
+            >
               <span className="text-2xl font-bold">{totalNewCustomers}</span>
-              <span className="text-xs text-gray-500">New Customer</span>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-6 py-3 flex flex-col items-center">
+              <span className="text-xs opacity-80">New Customer</span>
+            </button>
+
+            <button
+              className={`rounded-lg px-6 py-3 flex flex-col items-center border transition
+                ${statusFilter === "repeat" ? "bg-blue-600 text-white border-blue-600"
+                                            : "bg-blue-50 border-blue-200 text-gray-900"}`}
+              onClick={() => setStatusFilter("repeat")}
+              aria-pressed={statusFilter === "repeat"}
+            >
               <span className="text-2xl font-bold">{totalRepeatCustomers}</span>
-              <span className="text-xs text-gray-500">Repeat Customer</span>
-            </div>
+              <span className="text-xs opacity-80">Repeat Customer</span>
+            </button>
           </div>
         </div>
         {/* Search and Sort */}
