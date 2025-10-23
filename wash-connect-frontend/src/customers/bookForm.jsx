@@ -38,6 +38,9 @@ function BookForm() {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // Vehicle type enum: Car or Motorcycle
+  const [vehicleType, setVehicleType] = useState("Motorcycle");
+
   // Data
   const [personnelList, setPersonnelList] = useState([]);
   const [selectedPersonnelId, setSelectedPersonnelId] = useState("");
@@ -123,6 +126,12 @@ function BookForm() {
     };
   }, [selectedServiceName, statePrice, stateImg, fetchedServices]);
 
+  // Price with vehicle surcharge (₱200 if Car)
+  const finalPrice = useMemo(() => {
+    const base = Number(selectedService.price ?? 0);
+    return base + (vehicleType === "Car" ? 200 : 0);
+  }, [selectedService.price, vehicleType]);
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -135,13 +144,14 @@ function BookForm() {
     const user_id = user.id || user.user_id || "";
 
     const service_name = selectedService.name;
-    const price = Number(selectedService.price ?? 0);
+    const basePrice = Number(selectedService.price ?? 0);
+    const price = basePrice + (vehicleType === "Car" ? 200 : 0);
     const schedule_date = form.date;
     const address = form.address;
     const message = form.message;
     const schedule_time = form.time;
 
-    if (!user_id || !applicationId || !service_name || !schedule_date || !address) {
+    if (!user_id || !applicationId || !service_name || !schedule_date || !address || !vehicleType) {
       toast.error("Missing required fields.");
       setSubmitting(false);
       return;
@@ -163,8 +173,9 @@ function BookForm() {
           address,
           message,
           personnelId: selectedPersonnelId,
-          price,
+          price, // includes vehicle surcharge if Car
           schedule_time,
+          vehicle_type: vehicleType, // send enum to backend
         }),
       });
       const data = await res.json();
@@ -349,7 +360,14 @@ function BookForm() {
               />
               <div>
                 <div className="font-semibold">{selectedService.name}</div>
-                <div className="text-gray-700">Price: ₱{Number(selectedService.price ?? 0)}</div>
+                <div className="text-gray-700">
+                  Price: ₱{finalPrice}
+                </div>
+                {vehicleType === "Car" && (
+                  <div className="text-xs text-gray-500">
+                    Includes ₱200 car service fee
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -404,6 +422,22 @@ function BookForm() {
               </div>
             </div>
 
+            {/* Vehicle Type */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block mb-1 text-gray-700">Vehicle type</label>
+                <select
+                  value={vehicleType}
+                  onChange={(e) => setVehicleType(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                  required
+                >
+                  <option value="Motorcycle">Motorcycle</option>
+                  <option value="Car">Car</option>
+                </select>
+              </div>
+            </div>
+
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="block mb-1 text-gray-700">Address</label>
@@ -452,36 +486,36 @@ function BookForm() {
                       <strong>Available Day:</strong> {selectedPersonnel.day_available}
                     </div>
                   )}
-                  </div>
-                  </div>
-                  </div>
+                </div>
+              </div>
+            </div>
 
-                  <div className="flex-1">
-                    <label className="block mb-1 text-gray-700">Select Carwash Boy</label>
-                    <select
-                      name="personnelId"
-                      value={selectedPersonnelId}
-                      onChange={(e) => setSelectedPersonnelId(e.target.value)}
-                      className="w-full border rounded px-3 py-2"
-                      required
-                    >
-                      <option value="">Select...</option>
-                      {personnelList.map((p) => (
-                        <option
-                          key={p.personnelId}
-                          value={p.personnelId}
-                          disabled={unavailablePersonnelIds.includes(String(p.personnelId))}
-                          style={
-                            unavailablePersonnelIds.includes(String(p.personnelId))
-                              ? { backgroundColor: "#f3f3f3", color: "#bbb" }
-                              : {}
-                          }
-                        >
-                          {p.first_name} {p.last_name}
-                          {unavailablePersonnelIds.includes(String(p.personnelId)) ? " (Unavailable)" : ""}
-                        </option>
-                      ))}
-                    </select>
+            <div className="flex-1">
+              <label className="block mb-1 text-gray-700">Select Carwash Boy</label>
+              <select
+                name="personnelId"
+                value={selectedPersonnelId}
+                onChange={(e) => setSelectedPersonnelId(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+                required
+              >
+                <option value="">Select...</option>
+                {personnelList.map((p) => (
+                  <option
+                    key={p.personnelId}
+                    value={p.personnelId}
+                    disabled={unavailablePersonnelIds.includes(String(p.personnelId))}
+                    style={
+                      unavailablePersonnelIds.includes(String(p.personnelId))
+                        ? { backgroundColor: "#f3f3f3", color: "#bbb" }
+                        : {}
+                    }
+                  >
+                    {p.first_name} {p.last_name}
+                    {unavailablePersonnelIds.includes(String(p.personnelId)) ? " (Unavailable)" : ""}
+                  </option>
+                ))}
+              </select>
               {selectedPersonnel && selectedPersonnel.time_available && (
                 <div className="mb-2 text-sm text-blue-700">
                   <strong>Available Time:</strong> {selectedPersonnel.time_available}

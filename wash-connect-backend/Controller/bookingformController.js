@@ -31,7 +31,9 @@ exports.createBooking = async (req, res) => {
         address,
         message,
         personnelId,
-        price
+        price,
+        vehicle_type: vtBody,   // accept snake_case
+        vehicleType            // accept camelCase
     } = req.body;
 
     try {
@@ -59,10 +61,14 @@ exports.createBooking = async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
+        // Normalize vehicle type to enum 'Car' | 'Motorcycle' (default to 'Motorcycle')
+        const normalizedVehicleType =
+            String(vtBody ?? vehicleType ?? 'Motorcycle').toLowerCase() === 'car' ? 'Car' : 'Motorcycle';
+
         const [result] = await pool.query(
-            `INSERT INTO bookings (user_id, applicationId, service_name, schedule_date, schedule_time, address, message, personnelId, price)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [user_id, applicationId, service_name, schedule_date, schedule_time, address, message || null, personnelId || null, price]
+            `INSERT INTO bookings (user_id, applicationId, service_name, schedule_date, schedule_time, address, message, personnelId, price, vehicle_type)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [user_id, applicationId, service_name, schedule_date, schedule_time, address, message || null, personnelId || null, price, normalizedVehicleType]
         );
         res.status(201).json({
             message: 'Booking submitted successfully',

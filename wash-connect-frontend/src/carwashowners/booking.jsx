@@ -492,7 +492,7 @@ function Bookings() {
                             <option>{status}</option>
                           </select>
                         </div>
-                      )}
+                )}
 
                       <div className="flex items-center text-sm text-gray-600 mb-1">
                         <FaMapMarkerAlt className="mr-1" /> {booking.address}
@@ -502,6 +502,14 @@ function Bookings() {
                         <div>
                           <span className="font-semibold">Service:</span>
                           <span className="ml-1">{booking.service_name}</span>
+                        </div>
+
+                        {/* Vehicle Type */}
+                        <div className="mt-1">
+                          <span className="font-semibold">Vehicle:</span>
+                          <span className="ml-2">
+                            {booking.vehicle_type || booking.vehicleType || "Motorcycle"}
+                          </span>
                         </div>
 
                         {/* Display assigned carwash boy (attendant) directly under service */}
