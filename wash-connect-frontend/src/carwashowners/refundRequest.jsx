@@ -8,6 +8,10 @@ export default function RefundRequest() {
   const [fetchError, setFetchError] = useState("");
   const navigate = useNavigate();
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
   useEffect(() => {
     // Try both possible keys to stay backward compatible
     const ownerData =
@@ -39,6 +43,7 @@ export default function RefundRequest() {
       .then((data) => {
         // Ensure array
         setRequests(Array.isArray(data) ? data : []);
+        setPage(1); // reset to first page when data loads
         setLoading(false);
       })
       .catch((err) => {
@@ -50,6 +55,18 @@ export default function RefundRequest() {
 
     return () => controller.abort();
   }, []);
+  
+  // Clamp page if data size shrinks
+  useEffect(() => {
+    const total = Math.max(1, Math.ceil(requests.length / pageSize));
+    if (page > total) setPage(total);
+  }, [requests.length]);
+
+  // Derived pagination values
+  const totalPages = Math.max(1, Math.ceil(requests.length / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, requests.length);
+  const pageRequests = requests.slice(startIndex, endIndex);
 
   const handleAction = async (id, action) => {
     try {
@@ -161,7 +178,7 @@ export default function RefundRequest() {
                   </tr>
                 </thead>
                 <tbody>
-                  {requests.map(req => (
+                  {pageRequests.map(req => (
                     <tr key={req.id} className="border-t border-gray-200 hover:bg-gray-50">
                       <td className="py-3 px-4">{req.customer}</td>
                       <td className="py-3 px-4">
@@ -205,6 +222,30 @@ export default function RefundRequest() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination controls */}
+              <div className="flex items-center justify-between mt-4">
+                <span className="text-sm text-gray-600">
+                  Showing {requests.length ? startIndex + 1 : 0}-{endIndex} of {requests.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    className={`px-3 py-1 rounded border ${page === 1 ? "text-gray-400 border-gray-200" : "hover:bg-gray-100"}`}
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-700">Page {page} of {totalPages}</span>
+                  <button
+                    className={`px-3 py-1 rounded border ${page === totalPages ? "text-gray-400 border-gray-200" : "hover:bg-gray-100"}`}
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

@@ -111,10 +111,13 @@ function PersonnelList() {
             <FaRegCheckSquare className="text-lg" />
             <span>Manage Bookings</span>
           </button>
-          <div className="flex items-center gap-2 mb-1 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200">
+          <button
+            className="flex items-center gap-2 mb-1 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200 w-full text-left"
+            onClick={() => navigate('/booking-history')}
+          >
             <FaRegCheckSquare className="text-lg" />
             <span>Booking History</span>
-          </div>
+          </button>
           <div className="flex items-center gap-2 mt-2 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200" onClick={() => navigate('/earning-dashboard')}>
             <FaTrophy className="text-lg" />
             <span>Earnings Dashboard</span>
