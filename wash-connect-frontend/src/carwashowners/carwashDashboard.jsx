@@ -602,19 +602,11 @@ export default function CarwashDashboard() {
 					<aside className="col-span-1 flex flex-col gap-8">
             {/* Lead Details */}
             <div className="bg-white rounded-lg shadow p-6">
--              <div className="flex items-center justify-between">
--                <h4 className="font-semibold text-lg">Lead Details</h4>
--                <button className="text-gray-400 hover:text-gray-700">
--                  <svg width="20" height="20" fill="currentColor">
--                    <circle cx="10" cy="5" r="1.5" />
--                    <circle cx="10" cy="10" r="1.5" />
--                    <circle cx="10" cy="15" r="1.5" />
--                  </svg>
--                </button>
--              </div>
-+              <div className="flex items-center">
-+                <h4 className="font-semibold text-lg">Lead Details</h4>
-+              </div>
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-lg">Lead Details</h4>
+                <button className="text-gray-400 hover:text-gray-700">
+                </button>
+              </div>
               <div className="mt-4 space-y-3 text-sm">
                 <div className="flex items-center">
                   <span className="w-24 text-gray-500">Company</span>
