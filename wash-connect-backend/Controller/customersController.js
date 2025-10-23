@@ -9,7 +9,7 @@ exports.getCustomersByApplication = async (req, res) => {
   const buildQueries = () => {
     const bAppCols = ['applicationId', 'application_id'];
     const bStatusCols = ['status', 'booking_status'];
-    const bUserIdCols = ['user_id', 'userId']; // bookings user id variants
+    const bUserIdCols = ['user_id']; // bookings user id variants
     const tsAggs = [
       'MAX(COALESCE(b.updated_at, b.created_at))',
       'MAX(COALESCE(b.updatedAt, b.createdAt))',
@@ -17,7 +17,7 @@ exports.getCustomersByApplication = async (req, res) => {
       'MAX(COALESCE(b.scheduleDate, b.createdAt))',
     ];
 
-    const uIdCols = ['user_id', 'id'];        // users PK variants
+    const uIdCols = ['user_id'];        // users PK variants
     const includeAddressAvatar = [true, false];
     const includeUsersJoin = [true, false];    // allow no users table
 
