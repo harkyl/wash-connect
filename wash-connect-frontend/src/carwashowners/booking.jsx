@@ -511,7 +511,12 @@ function Bookings() {
                             {booking.vehicle_type || booking.vehicleType || "Motorcycle"}
                           </span>
                         </div>
-
+                        <div className="mt-1">
+                          <span className="font-semibold">Vehicle Model:</span>
+                          <span className="ml-2">
+                            {booking.vehicle_model || booking.vehicleModel || "N/A"}
+                          </span>
+                        </div>
                         {/* Display assigned carwash boy (attendant) directly under service */}
                         <div className="mt-1">
                           <span className="font-semibold">Attendant:</span>

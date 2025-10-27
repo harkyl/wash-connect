@@ -505,6 +505,12 @@ export default function CarwashDashboard() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
+                            <span className="font-semibold">Vehicle Model:</span>
+                            <span className="truncate">
+                              {booking.vehicle_model || booking.vehicleModel || "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
                             <span className="font-semibold">Email:</span>
                             <span className="truncate">{booking.customer_email}</span>
                           </div>

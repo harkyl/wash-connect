@@ -35,6 +35,7 @@ function BookForm() {
     date: "",
     time: "",
     message: "",
+    vehicleModel: "",      // NEW
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -151,12 +152,11 @@ function BookForm() {
     const message = form.message;
     const schedule_time = form.time;
 
-    if (!user_id || !applicationId || !service_name || !schedule_date || !address || !vehicleType) {
+    if (!user_id || !applicationId || !service_name || !schedule_date || !address || !vehicleType || !form.vehicleModel) {
       toast.error("Missing required fields.");
       setSubmitting(false);
       return;
     }
-
     try {
       const token = localStorage.getItem("token");
       const res = await fetch("http://localhost:3000/api/bookings", {
@@ -175,7 +175,8 @@ function BookForm() {
           personnelId: selectedPersonnelId,
           price, // includes vehicle surcharge if Car
           schedule_time,
-          vehicle_type: vehicleType, // send enum to backend
+          vehicle_type: vehicleType,
+          vehicle_model: form.vehicleModel,   // NEW
         }),
       });
       const data = await res.json();
@@ -422,7 +423,7 @@ function BookForm() {
               </div>
             </div>
 
-            {/* Vehicle Type */}
+            {/* Vehicle Type + Model */}
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="block mb-1 text-gray-700">Vehicle type</label>
@@ -435,6 +436,18 @@ function BookForm() {
                   <option value="Motorcycle">Motorcycle</option>
                   <option value="Car">Car</option>
                 </select>
+              </div>
+              <div className="flex-1">
+                <label className="block mb-1 text-gray-700">Vehicle model</label>
+                <input
+                  type="text"
+                  name="vehicleModel"
+                  placeholder="e.g., Toyota Vios 2018"
+                  value={form.vehicleModel}
+                  onChange={handleChange}
+                  className="px-3 py-2 rounded border border-gray-300 w-full focus:outline-none"
+                  required
+                />
               </div>
             </div>
 

@@ -33,7 +33,8 @@ exports.createBooking = async (req, res) => {
         personnelId,
         price,
         vehicle_type: vtBody,   // accept snake_case
-        vehicleType            // accept camelCase
+        vehicleType,            // accept camelCase
+        vehicle_model           // NEW
     } = req.body;
 
     try {
@@ -66,9 +67,9 @@ exports.createBooking = async (req, res) => {
             String(vtBody ?? vehicleType ?? 'Motorcycle').toLowerCase() === 'car' ? 'Car' : 'Motorcycle';
 
         const [result] = await pool.query(
-            `INSERT INTO bookings (user_id, applicationId, service_name, schedule_date, schedule_time, address, message, personnelId, price, vehicle_type)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [user_id, applicationId, service_name, schedule_date, schedule_time, address, message || null, personnelId || null, price, normalizedVehicleType]
+            `INSERT INTO bookings (user_id, applicationId, service_name, schedule_date, schedule_time, address, message, personnelId, price, vehicle_type, vehicle_model)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [user_id, applicationId, service_name, schedule_date, schedule_time, address, message || null, personnelId || null, price, normalizedVehicleType, vehicle_model || null]
         );
         res.status(201).json({
             message: 'Booking submitted successfully',

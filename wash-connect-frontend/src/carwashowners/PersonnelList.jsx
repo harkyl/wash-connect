@@ -166,28 +166,63 @@ function PersonnelList() {
             </div>
           </div>
           <div className="flex gap-4 mt-2">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-6 py-3 flex flex-col items-center">
+            {/* All */}
+            <button
+              className={`rounded-lg px-6 py-3 flex flex-col items-center border transition cursor-pointer select-none
+                ${filter === "All" ? "bg-blue-600 text-white border-blue-600"
+                                   : "bg-blue-50 border-blue-200 text-gray-900"}`}
+              onClick={() => setFilter("All")}
+              aria-pressed={filter === "All"}
+              type="button"
+            >
               <span className="text-2xl font-bold">{personnel.length}</span>
-              <span className="text-xs text-gray-500">All Employee</span>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-6 py-3 flex flex-col items-center">
+              <span className="text-xs opacity-80">All Employee</span>
+            </button>
+
+            {/* Full-time */}
+            <button
+              className={`rounded-lg px-6 py-3 flex flex-col items-center border transition cursor-pointer select-none
+                ${filter === "Full-Time" ? "bg-blue-600 text-white border-blue-600"
+                                         : "bg-blue-50 border-blue-200 text-gray-900"}`}
+              onClick={() => setFilter("Full-Time")}
+              aria-pressed={filter === "Full-Time"}
+              type="button"
+            >
               <span className="text-2xl font-bold">
                 {personnel.filter(p => p.type === "Full-Time").length}
               </span>
-              <span className="text-xs text-gray-500">Full-time</span>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-6 py-3 flex flex-col items-center">
+              <span className="text-xs opacity-80">Full-time</span>
+            </button>
+
+            {/* Part-time */}
+            <button
+              className={`rounded-lg px-6 py-3 flex flex-col items-center border transition cursor-pointer select-none
+                ${filter === "Part-Time" ? "bg-blue-600 text-white border-blue-600"
+                                         : "bg-blue-50 border-blue-200 text-gray-900"}`}
+              onClick={() => setFilter("Part-Time")}
+              aria-pressed={filter === "Part-Time"}
+              type="button"
+            >
               <span className="text-2xl font-bold">
                 {personnel.filter(p => p.type === "Part-Time").length}
               </span>
-              <span className="text-xs text-gray-500">Part-time</span>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-6 py-3 flex flex-col items-center">
+              <span className="text-xs opacity-80">Part-time</span>
+            </button>
+
+            {/* Contractual */}
+            <button
+              className={`rounded-lg px-6 py-3 flex flex-col items-center border transition cursor-pointer select-none
+                ${filter === "Contractual" ? "bg-blue-600 text-white border-blue-600"
+                                           : "bg-blue-50 border-blue-200 text-gray-900"}`}
+              onClick={() => setFilter("Contractual")}
+              aria-pressed={filter === "Contractual"}
+              type="button"
+            >
               <span className="text-2xl font-bold">
                 {personnel.filter(p => p.type === "Contractual").length}
               </span>
-              <span className="text-xs text-gray-500">Contractual</span>
-            </div>
+              <span className="text-xs opacity-80">Contractual</span>
+            </button>
           </div>
         </div>
         {/* Search and Actions */}
