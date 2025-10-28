@@ -34,9 +34,7 @@ function AdminDashboard() {
     }
 
     fetch("http://localhost:3000/api/all", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => {
         if (res.status === 401) {
@@ -49,9 +47,7 @@ function AdminDashboard() {
       .catch(() => setPayments([]));
 
     fetch("http://localhost:3000/api/refunds", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => {
         if (res.status === 401) {
@@ -138,22 +134,23 @@ function AdminDashboard() {
     (getAppId(p) ? appNames[getAppId(p)] : undefined) ||
     "Unknown Shop";
 
-  // NEW: derive tax rows (Paid only), with computed tax and totals
+  // NEW: derive service fee rows (Paid only), with computed fee (2%) and totals
   const paidPayments = useMemo(
     () => payments.filter(p => String(p?.payment_status || p?.status || "").toLowerCase() === "paid"),
     [payments]
   );
-  const taxRows = useMemo(
+  const serviceFeeRows = useMemo(
     () => paidPayments.map(p => ({
       ...p,
       shop: shopNameForPayment(p),
-      tax: Number(p?.tax ?? (Number(p?.amount || 0) * 0.10)),
+      // Use DB column 'tax' as the service fee when present, else compute 2%
+      serviceFee: Number(p?.tax ?? (Number(p?.amount || 0) * 0.02)),
     })),
     [paidPayments, appNames]
   );
-  const totalTax = useMemo(
-    () => taxRows.reduce((sum, r) => sum + (Number(r.tax) || 0), 0),
-    [taxRows]
+  const totalServiceFee = useMemo(
+    () => serviceFeeRows.reduce((sum, r) => sum + (Number(r.serviceFee) || 0), 0),
+    [serviceFeeRows]
   );
 
   // NEW: compute Top Selling Shop by count of Paid payments (tie-breaker: higher total amount)
@@ -196,31 +193,32 @@ function AdminDashboard() {
     ],
   };
 
-  // Prepare tax by method for chart
-  const taxByMethod = {};
+  // Prepare service fee by method for chart
+  const feeByMethod = {};
   payments
     .filter(p => String(p?.payment_status || p?.status || "").toLowerCase() === "paid")
     .forEach(p => {
       const method = p.method || "Unknown";
-      const tax = p.tax ? Number(p.tax) : Number(p.amount) * 0.10;
-      taxByMethod[method] = (taxByMethod[method] || 0) + tax;
+      // DB column 'tax' is treated as the service fee; fallback to 2% of amount
+      const fee = p.tax ? Number(p.tax) : Number(p.amount || 0) * 0.02;
+      feeByMethod[method] = (feeByMethod[method] || 0) + fee;
     });
 
-  const taxBarData = {
-    labels: Object.keys(taxByMethod),
+  const feeBarData = {
+    labels: Object.keys(feeByMethod),
     datasets: [
       {
-        label: "Tax Collected by Method",
-        data: Object.values(taxByMethod),
+        label: "Service Fee Collected by Method",
+        data: Object.values(feeByMethod),
         backgroundColor: ["#60a5fa", "#fbbf24", "#34d399", "#f87171", "#a78bfa"],
       },
     ],
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="h-screen flex overflow-hidden bg-white">
       {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-gray-200 flex flex-col min-h-screen">
+      <aside className="w-72 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
         <div className="flex items-center px-8 py-8 border-b border-gray-100">
           <span className="text-3xl" style={{ fontFamily: "Brush Script MT, cursive" }}>
             <span className="text-black-500">Wash</span>{" "}
@@ -267,24 +265,25 @@ function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 bg-[#e6faff] min-h-screen">
+      <main className="flex-1 bg-[#e6faff] h-screen overflow-y-auto">
         {/* Header */}
-        <header className="flex items-center justify-between px-10 py-6 bg-cyan-100 border-b border-gray-200">
-          <div className="flex items-center">
-            <button className="mr-4">
+        <header className="flex items-center justify-between px-6 md:px-10 py-4 md:py-6 bg-cyan-100 border-b border-gray-200 sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <button className="p-2 rounded hover:bg-cyan-200/50">
               <Inbox className="w-6 h-6 text-gray-700" />
             </button>
             <span className="text-lg font-semibold">Earnings Dashboard</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <span className="text-sm text-gray-700">SuperAdmin</span>
             <UserCircle className="w-7 h-7 text-gray-700" />
           </div>
         </header>
 
-        <div className="p-10">
-          {/* NEW: Top Selling Shop card */}
-          <div className="bg-white rounded-xl shadow p-6 border border-gray-100 mb-8">
+        {/* Container */}
+        <div className="mx-auto w-full max-w-7xl px-6 md:px-10 py-6 md:py-8">
+          {/* Top Selling Shop */}
+          <section className="bg-white rounded-xl shadow p-5 md:p-6 border border-gray-100 mb-6 md:mb-8">
             <h4 className="font-semibold mb-2">Top Selling Shop</h4>
             {topShop ? (
               <div className="text-gray-800">
@@ -299,31 +298,37 @@ function AdminDashboard() {
             ) : (
               <div className="text-gray-500">No paid payments yet.</div>
             )}
-          </div>
+          </section>
 
-          {/* Analytical Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            <div className="bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col items-center">
+          {/* Analytics Cards */}
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-6 md:mb-8">
+            <div className="bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col">
               <h4 className="font-semibold mb-4">Income vs Refund</h4>
-              <div style={{ width: "100%", maxWidth: 180, height: 180 }}>
-                <Doughnut data={doughnutData} options={{ maintainAspectRatio: false }} />
+              <div className="h-48 md:h-56 w-full">
+                <Doughnut data={doughnutData} options={{ maintainAspectRatio: false, responsive: true }} />
               </div>
-              <div className="mt-4 text-center">
-                <div className="text-green-600 font-bold">Income: ₱{analytics.totalIncome.toLocaleString()}</div>
-                <div className="text-red-600 font-bold">Refund: ₱{analytics.totalRefund.toLocaleString()}</div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+                <div className="text-green-600 font-bold">₱{analytics.totalIncome.toLocaleString()}</div>
+                <div className="text-red-600 font-bold">₱{analytics.totalRefund.toLocaleString()}</div>
+              </div>
+              <div className="mt-1 grid grid-cols-2 text-xs text-gray-500 text-center">
+                <span>Income</span>
+                <span>Refund</span>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col items-center">
+
+            <div className="bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col">
               <h4 className="font-semibold mb-4">Payments by Method</h4>
-              <div style={{ width: "100%", maxWidth: 220, height: 180 }}>
+              <div className="h-48 md:h-56 w-full">
                 <Bar data={barData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col items-center">
-              <h4 className="font-semibold mb-4">Tax Collected by Method</h4>
-              <div style={{ width: "100%", maxWidth: 220, height: 180 }}>
+
+            <div className="bg-white rounded-xl shadow p-6 border border-gray-100 flex flex-col">
+              <h4 className="font-semibold mb-4">Service Fee Collected by Method</h4>
+              <div className="h-48 md:h-56 w-full">
                 <Bar
-                  data={taxBarData}
+                  data={feeBarData}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
@@ -331,17 +336,20 @@ function AdminDashboard() {
                     scales: {
                       y: {
                         beginAtZero: true,
-                        ticks: { callback: (value) => `₱${value.toLocaleString()}` },
+                        ticks: {
+                          callback: (value) => `₱${Number(value).toLocaleString()}`,
+                        },
                       },
                     },
                   }}
                 />
               </div>
             </div>
-          </div>
-          {/* Payments / Tax Tabs */}
-          <div className="bg-white rounded-xl shadow p-8 border border-gray-100">
-            <div className="flex items-center justify-between mb-6">
+          </section>
+
+          {/* Reports */}
+          <section className="bg-white rounded-xl shadow border border-gray-100">
+            <div className="p-5 md:p-6 border-b flex items-center justify-between">
               <h3 className="text-lg font-semibold">Reports</h3>
               <div className="flex gap-2">
                 <button
@@ -351,91 +359,95 @@ function AdminDashboard() {
                   Payments
                 </button>
                 <button
-                  className={`px-3 py-1 rounded-lg text-sm ${activeTab === "tax" ? "bg-cyan-600 text-white" : "bg-gray-100 text-gray-700"}`}
-                  onClick={() => setActiveTab("tax")}
+                  className={`px-3 py-1 rounded-lg text-sm ${activeTab === "serviceFee" ? "bg-cyan-600 text-white" : "bg-gray-100 text-gray-700"}`}
+                  onClick={() => setActiveTab("serviceFee")}
                 >
-                  Tax Collected
+                  Service Fee
                 </button>
               </div>
             </div>
 
             {activeTab === "payments" ? (
-              // PAYMENTS TABLE (existing)
-              <div style={{ maxHeight: "340px", overflowY: "auto" }}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-gray-500">
-                      <th className="py-2 text-left">Payment ID</th>
-                      <th className="py-2 text-left">Shop</th>
-                      <th className="py-2 text-left">Amount</th>
-                      <th className="py-2 text-left">Date</th>
-                      <th className="py-2 text-left">Method</th>
-                      <th className="py-2 text-left">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="text-center text-gray-400 py-4">No payments found.</td>
-                      </tr>
-                    ) : (
-                      payments.map((p) => (
-                        <tr key={p.payment_id} className="border-t">
-                          <td className="py-2">{p.payment_id}</td>
-                          <td className="py-2">{shopNameForPayment(p)}</td>
-                          <td className="py-2">₱{Number(p.amount).toLocaleString()}</td>
-                          <td className="py-2">{p.date ? String(p.date).slice(0, 16).replace("T", " ") : ""}</td>
-                          <td className="py-2">{p.method}</td>
-                          <td className="py-2">{p.payment_status || p.status}</td>
+              <div className="p-5 md:p-6">
+                <div className="rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="max-h-80 overflow-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 sticky top-0 z-10">
+                        <tr className="text-gray-600">
+                          <th className="py-2 px-3 text-left">Payment ID</th>
+                          <th className="py-2 px-3 text-left">Shop</th>
+                          <th className="py-2 px-3 text-left">Amount</th>
+                          <th className="py-2 px-3 text-left">Date</th>
+                          <th className="py-2 px-3 text-left">Method</th>
+                          <th className="py-2 px-3 text-left">Status</th>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              // TAX COLLECTED TAB
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm text-gray-700">
-                    Total Tax Collected (Paid): <span className="font-semibold">₱{totalTax.toLocaleString()}</span>
+                      </thead>
+                      <tbody>
+                        {payments.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="text-center text-gray-400 py-6">No payments found.</td>
+                          </tr>
+                        ) : (
+                          payments.map((p) => (
+                            <tr key={p.payment_id} className="border-t hover:bg-gray-50/60">
+                              <td className="py-2 px-3">{p.payment_id}</td>
+                              <td className="py-2 px-3">{shopNameForPayment(p)}</td>
+                              <td className="py-2 px-3">₱{Number(p.amount).toLocaleString()}</td>
+                              <td className="py-2 px-3">{p.date ? String(p.date).slice(0, 16).replace("T", " ") : ""}</td>
+                              <td className="py-2 px-3">{p.method}</td>
+                              <td className="py-2 px-3">{p.payment_status || p.status}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-                <div style={{ maxHeight: "340px", overflowY: "auto" }}>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-gray-500">
-                        <th className="py-2 text-left">Payment ID</th>
-                        <th className="py-2 text-left">Shop</th>
-                        <th className="py-2 text-left">Amount</th>
-                        <th className="py-2 text-left">Tax (10%)</th>
-                        <th className="py-2 text-left">Method</th>
-                        <th className="py-2 text-left">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {taxRows.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="text-center text-gray-400 py-4">No paid transactions found.</td>
-                        </tr>
-                      ) : (
-                        taxRows.map((r) => (
-                          <tr key={r.payment_id} className="border-t">
-                            <td className="py-2">{r.payment_id}</td>
-                            <td className="py-2">{r.shop}</td>
-                            <td className="py-2">₱{Number(r.amount).toLocaleString()}</td>
-                            <td className="py-2">₱{Number(r.tax).toLocaleString()}</td>
-                            <td className="py-2">{r.method || "Unknown"}</td>
-                            <td className="py-2">{r.date ? String(r.date).slice(0, 16).replace("T", " ") : ""}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+              </div>
+            ) : (
+              <div className="p-5 md:p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-sm text-gray-700">
+                    Total Service Fee (Paid): <span className="font-semibold">₱{totalServiceFee.toLocaleString()}</span>
+                  </div>
                 </div>
-              </>
+                <div className="rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="max-h-80 overflow-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 sticky top-0 z-10">
+                        <tr className="text-gray-600">
+                          <th className="py-2 px-3 text-left">Payment ID</th>
+                          <th className="py-2 px-3 text-left">Shop</th>
+                          <th className="py-2 px-3 text-left">Amount</th>
+                          <th className="py-2 px-3 text-left">Service Fee (2%)</th>
+                          <th className="py-2 px-3 text-left">Method</th>
+                          <th className="py-2 px-3 text-left">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {serviceFeeRows.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="text-center text-gray-400 py-6">No paid transactions found.</td>
+                          </tr>
+                        ) : (
+                          serviceFeeRows.map((r) => (
+                            <tr key={r.payment_id} className="border-t hover:bg-gray-50/60">
+                              <td className="py-2 px-3">{r.payment_id}</td>
+                              <td className="py-2 px-3">{r.shop}</td>
+                              <td className="py-2 px-3">₱{Number(r.amount).toLocaleString()}</td>
+                              <td className="py-2 px-3">₱{Number(r.serviceFee).toLocaleString()}</td>
+                              <td className="py-2 px-3">{r.method || "Unknown"}</td>
+                              <td className="py-2 px-3">{r.date ? String(r.date).slice(0, 16).replace("T", " ") : ""}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             )}
-          </div>
+          </section>
         </div>
       </main>
     </div>
