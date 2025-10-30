@@ -173,9 +173,9 @@ export default function CarwashDashboard() {
 	}
 
 	return (
-		<div className="flex h-screen bg-gray-50">
+		<div className="h-screen flex overflow-hidden bg-gray-50">
 			{/* Sidebar */}
-			<aside className="w-64 bg-white border-r flex flex-col">
+			<aside className="w-64 bg-white border-r flex flex-col h-screen sticky top-0">
 				{/* Logo */}
 				<div className="px-6 py-8">
 					<div className="text-3xl flex items-center select-none">
@@ -225,10 +225,13 @@ export default function CarwashDashboard() {
 					<FaRegCheckSquare className="text-lg" />
 					<span>Manage Bookings</span>
 				  </button>
-				  <div className="flex items-center gap-2 mb-1 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200">
+				  <button
+					className="flex items-center gap-2 mb-1 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200 w-full text-left"
+					onClick={() => navigate("/booking-history")}
+				  >
 					<FaRegCheckSquare className="text-lg" />
 					<span>Booking History</span>
-				  </div>
+				  </button>
 				  <div className="flex items-center gap-2 mt-2 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200" onClick={() => navigate('/earning-dashboard')}>
 					<FaTrophy className="text-lg" />
 					<span>Earnings Dashboard</span>
@@ -252,9 +255,9 @@ export default function CarwashDashboard() {
 			</aside>
 
 			{/* Main Content */}
-			<main className="flex-1 flex flex-col"> 
+			<main className="flex-1 flex flex-col min-w-0 overflow-y-auto"> 
 				{/* Header */}
-				<header className="flex items-center justify-between px-8 py-4 bg-blue-100 border-b">
+				<header className="flex items-center justify-between px-8 py-4 bg-blue-100 border-b sticky top-0 z-10">
 					<div className="flex items-center gap-4">
 						<h1 className="text-2xl font-semibold">Overview</h1>
 					</div>
@@ -327,21 +330,11 @@ export default function CarwashDashboard() {
 											}
 										}}
 									/>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										className="h-5 w-5 text-blue-500"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M12 4v16m8-8H4"
-										/>
+									<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+										<path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" />
+										<circle cx="12" cy="13" r="3.5" />
 									</svg>
-								</label>
+                                </label>
                                 {/* Success indicator */}
                                 {profileUploaded && (
                                     <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow flex items-center">
@@ -614,10 +607,8 @@ export default function CarwashDashboard() {
 					<aside className="col-span-1 flex flex-col gap-8">
             {/* Lead Details */}
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center">
                 <h4 className="font-semibold text-lg">Lead Details</h4>
-                <button className="text-gray-400 hover:text-gray-700">
-                </button>
               </div>
               <div className="mt-4 space-y-3 text-sm">
                 <div className="flex items-center">
@@ -953,7 +944,19 @@ export default function CarwashDashboard() {
               </div>
               <div>
                 <div className="text-gray-500">Contact</div>
-                <div className="font-medium">{customerContact || "N/A"}</div> {/* CHANGED */}
+                <div className="font-medium">{customerContact || "N/A"}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Vehicle</div>
+                <div className="font-medium">
+                  {selectedBooking.vehicle_type || selectedBooking.vehicleType || "Motorcycle"}
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-500">Vehicle Model</div>
+                <div className="font-medium">
+                  {selectedBooking.vehicle_model || selectedBooking.vehicleModel || "N/A"}
+                </div>
               </div>
               <div className="md:col-span-2">
                 <div className="text-gray-500">Address</div>

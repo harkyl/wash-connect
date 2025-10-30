@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
-import ShopBanned from "./shopbanned"; // Add this import
 
 function CarwashLogin() {
   const navigate = useNavigate();
@@ -12,7 +11,6 @@ function CarwashLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isBanned, setIsBanned] = useState(false); // Add banned state
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -58,7 +56,7 @@ function CarwashLogin() {
 
       // Check for banned status
       if (status === "banned") {
-        setIsBanned(true);
+        navigate("/shop-banned", { replace: true });
         return;
       }
 
@@ -74,10 +72,6 @@ function CarwashLogin() {
       setLoading(false);
     }
   };
-
-  if (isBanned) {
-    return <ShopBanned />;
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-cyan-100">

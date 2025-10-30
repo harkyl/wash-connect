@@ -291,9 +291,9 @@ export default function EarningDashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="h-screen flex overflow-hidden bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r flex flex-col">
+      <aside className="w-64 bg-white border-r flex flex-col h-screen sticky top-0">
         <div className="px-6 py-8">
           <div className="text-3xl flex items-center select-none">
             <span className="text-gray-700" style={{ fontFamily: '"Great Vibes", cursive', fontSize: "2.2rem" }}>Wash</span>
@@ -341,20 +341,20 @@ export default function EarningDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navigation Tabs */}
-        <header className="flex items-center justify-between px-8 py-4 bg-blue-100 border-b">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold">Earnings Dashboard</h1>
-            <nav className="ml-8 flex gap-2">
+        <header className="flex items-center justify-between px-4 md:px-6 lg:px-8 py-3 md:py-4 bg-blue-100 border-b sticky top-0 z-10">
+          <div className="flex items-center gap-4 min-w-0">
+            <h1 className="text-xl md:text-2xl font-semibold truncate">Earnings Dashboard</h1>
+            <nav className="ml-4 md:ml-8 flex gap-2">
               <button
-                className={`px-4 py-2 rounded ${activeTab === "dashboard" ? "bg-blue-600 text-white" : "bg-white text-blue-600 border"}`}
+                className={`px-3 md:px-4 py-2 rounded ${activeTab === "dashboard" ? "bg-blue-600 text-white" : "bg-white text-blue-600 border"}`}
                 onClick={() => setActiveTab("dashboard")}
               >
                 Dashboard
               </button>
               <button
-                className={`px-4 py-2 rounded ${activeTab === "refunds" ? "bg-blue-600 text-white" : "bg-white text-blue-600 border"}`}
+                className={`px-3 md:px-4 py-2 rounded ${activeTab === "refunds" ? "bg-blue-600 text-white" : "bg-white text-blue-600 border"}`}
                 onClick={() => setActiveTab("refunds")}
               >
                 Refund Requests
@@ -362,25 +362,27 @@ export default function EarningDashboard() {
             </nav>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-500">Owner</span>
+            <span className="text-gray-500 hidden sm:inline">Owner</span>
             <FaUserCircle className="text-2xl text-gray-400" />
           </div>
         </header>
 
         {/* Tab Content */}
-        <div className="flex-1 grid grid-cols-3 gap-6 p-8 overflow-auto">
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
+            <div className={`grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 ${activeTab === "dashboard" ? "" : ""}`}>
           {activeTab === "dashboard" ? (
             <React.Fragment>
               {/* Summary Section */}
-              <section className="col-span-2 space-y-6">
-                <div className="flex gap-6">
-                  <div className="flex-1 bg-white rounded-xl shadow p-6 flex flex-col gap-2">
-                    <h2 className="text-xl font-semibold">{summary.carwashName}</h2>
+              <section className="lg:col-span-2 space-y-4 md:space-y-6 min-w-0">
+                <div className="flex gap-4 md:gap-6 flex-wrap">
+                  <div className="flex-1 min-w-[280px] bg-white rounded-xl shadow p-4 md:p-6 flex flex-col gap-2">
+                    <h2 className="text-lg md:text-xl font-semibold">{summary.carwashName}</h2>
                     <div className="flex items-center gap-4">
-                      <span className="text-gray-500">Track bookings and manage CRM here...</span>
-                      <span className="ml-auto text-sm text-gray-400">Date: {summary.month}</span>
+                      <span className="text-gray-500 truncate">Track bookings and manage CRM here...</span>
+                      <span className="ml-auto text-xs md:text-sm text-gray-400">Date: {summary.month}</span>
                     </div>
-                    <div className="flex items-center gap-8 mt-4">
+                    <div className="flex items-center gap-6 md:gap-8 mt-3">
                       <div>
                         <span className="font-bold text-lg">{finishedServicesCount}</span>
                         <span className="text-xs text-gray-500 ml-1">/ {services.length} services</span>
@@ -391,13 +393,13 @@ export default function EarningDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="w-40 h-40 bg-white rounded-xl shadow flex items-center justify-center">
-                    <img src={carwash.logo || "/default-logo.png"} alt="Carwash Logo" className="w-32 h-32 object-contain" />
+                  <div className="w-28 h-28 md:w-36 md:h-36 bg-white rounded-xl shadow flex items-center justify-center">
+                    <img src={carwash.logo || "/default-logo.png"} alt="Carwash Logo" className="w-24 h-24 md:w-28 md:h-28 object-contain" />
                   </div>
                 </div>
 
                 {/* Best/Lowest Month & Income/Expense/Profit */}
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
                     <span className="text-green-600 font-semibold">Best Month</span>
                     <span className="text-lg">{summary.bestMonth?.name}</span>
@@ -430,9 +432,9 @@ export default function EarningDashboard() {
                 </div>
 
                 {/* Net Income Trend */}
-                <div className="bg-white rounded-xl shadow p-6">
+                <div className="bg-white rounded-xl shadow p-4 md:p-6">
                   <h4 className="font-semibold mb-2">Net Income Trend (Last 6 Months)</h4>
-                  <div style={{ width: "100%", height: "200px" }}>
+                  <div className="w-full h-44 md:h-56">
                     <Bar
                       data={trendBarData}
                       options={{
@@ -455,8 +457,8 @@ export default function EarningDashboard() {
               </section>
 
               {/* Income & Expense Details + Analytics Charts */}
-              <section className="col-span-1 space-y-6">
-                <div className="bg-white rounded-xl shadow p-6">
+              <section className="lg:col-span-1 space-y-4 md:space-y-6 min-w-0">
+                <div className="bg-white rounded-xl shadow p-4 md:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="font-semibold">Income & Refund Details</h4>
                     <button
@@ -479,9 +481,9 @@ export default function EarningDashboard() {
                       <FaDownload className="text-sm" /> Export
                     </button>
                   </div>
-                  <div style={{ maxHeight: "180px", overflowY: "auto" }}>
+                  <div className="max-h-60 overflow-auto">
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 bg-white z-10">
                         <tr className="text-gray-500">
                           <th className="py-2 text-left">Date</th>
                           <th className="py-2 text-left">Type</th>
@@ -537,10 +539,10 @@ export default function EarningDashboard() {
                     </table>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
                   <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex flex-col items-center">
                     <h4 className="font-semibold mb-2">Income vs Refund</h4>
-                    <div style={{ width: "100%", maxWidth: 120, height: 120 }}>
+                    <div className="w-full max-w-[140px] h-[120px]">
                       <Doughnut data={doughnutData} options={{ maintainAspectRatio: false }} />
                     </div>
                     <div className="mt-2 text-center text-xs">
@@ -551,7 +553,7 @@ export default function EarningDashboard() {
                   </div>
                   <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex flex-col items-center">
                     <h4 className="font-semibold mb-2">Payments by Status</h4>
-                    <div style={{ width: "100%", maxWidth: 140, height: 120 }}>
+                    <div className="w-full max-w-[160px] h-[120px]">
                       <Bar
                         data={barData}
                         options={{
@@ -572,49 +574,53 @@ export default function EarningDashboard() {
               </section>
             </React.Fragment>
           ) : (
-            <section className="col-span-3">
-              <div className="bg-white rounded-xl shadow p-6 mt-4">
+            <section className="lg:col-span-3">
+              <div className="bg-white rounded-xl shadow p-4 md:p-6 mt-2 md:mt-4">
                 <h4 className="font-semibold mb-4">Refund Requests</h4>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-gray-500">
-                      <th className="py-2 text-left">Customer</th>
-                      <th className="py-2 text-left">Amount</th>
-                      <th className="py-2 text-left">Reason</th>
-                      <th className="py-2 text-left">Status</th>
-                      <th className="py-2 text-left">Requested At</th>
-                    </tr>
+               <div className="rounded-lg border border-gray-100 overflow-auto max-h-[60vh]">
+                 <table className="w-full text-sm">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
+                     <tr className="text-gray-500">
+                       <th className="py-2 text-left">Customer</th>
+                       <th className="py-2 text-left">Amount</th>
+                       <th className="py-2 text-left">Reason</th>
+                       <th className="py-2 text-left">Status</th>
+                       <th className="py-2 text-left">Requested At</th>
+                     </tr>
                   </thead>
-                  <tbody>
-                    {refunds.map((r) => (
-                      <tr key={r.id} className="border-t">
-                        <td className="py-2">{r.customer}</td>
-                        <td className="py-2">₱{Number(r.amount || 0).toFixed(2)}</td>
-                        <td className="py-2">{r.reason}</td>
-                        <td className="py-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                            r.status === "Approved"
-                              ? "bg-green-200 text-green-800"
-                              : r.status === "Rejected"
-                              ? "bg-red-200 text-red-800"
-                              : "bg-yellow-200 text-yellow-800"
-                          }`}>
-                            {r.status}
-                          </span>
-                        </td>
-                        <td className="py-2">{r.requestedAt ? r.requestedAt.slice(0, 19).replace("T", " ") : ""}</td>
-                      </tr>
-                    ))}
-                    {refunds.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="text-center text-gray-400 py-4">No refund requests.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                   <tbody>
+                     {refunds.map((r) => (
+                       <tr key={r.id} className="border-t">
+                         <td className="py-2">{r.customer}</td>
+                         <td className="py-2">₱{Number(r.amount || 0).toFixed(2)}</td>
+                         <td className="py-2">{r.reason}</td>
+                         <td className="py-2">
+                           <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                             r.status === "Approved"
+                               ? "bg-green-200 text-green-800"
+                               : r.status === "Rejected"
+                               ? "bg-red-200 text-red-800"
+                               : "bg-yellow-200 text-yellow-800"
+                           }`}>
+                             {r.status}
+                           </span>
+                         </td>
+                         <td className="py-2">{r.requestedAt ? r.requestedAt.slice(0, 19).replace("T", " ") : ""}</td>
+                       </tr>
+                     ))}
+                     {refunds.length === 0 && (
+                       <tr>
+                         <td colSpan={5} className="text-center text-gray-400 py-4">No refund requests.</td>
+                       </tr>
+                     )}
+                   </tbody>
+                 </table>
+               </div>
               </div>
             </section>
           )}
+            </div>
+          </div>
         </div>
       </main>
     </div>
