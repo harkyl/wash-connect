@@ -402,31 +402,34 @@ export default function EarningDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
                     <span className="text-green-600 font-semibold">Best Month</span>
-                    <span className="text-lg">{summary.bestMonth?.name}</span>
+                    <span className="text-base md:text-lg">{summary.bestMonth?.name}</span>
                     <span className="text-xs text-gray-500">Net Profit: {fmtPHP(summary.bestMonth?.profit || 0)}</span>
                   </div>
                   <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
                     <span className="text-red-600 font-semibold">Lowest Month</span>
-                    <span className="text-lg">{summary.lowestMonth?.name}</span>
+                    <span className="text-base md:text-lg">{summary.lowestMonth?.name}</span>
                     <span className="text-xs text-gray-500">Net Profit: {fmtPHP(summary.lowestMonth?.profit || 0)}</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
-                      <span className="text-blue-600 font-semibold">Total Income</span>
-                      <span className="text-lg">{fmtPHP(apiSummary.total_paid)}</span>
-                      <span className="text-xs text-green-600">{summary.incomeChange}</span>
+                  {/* KPIs: stack on small, 3 across from md */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[110px]">
+                      <span className="text-blue-600 font-semibold text-sm md:text-base">Total Income</span>
+                      <span className="text-base md:text-lg">{fmtPHP(apiSummary.total_paid)}</span>
+                      <span className="text-[10px] md:text-xs text-green-600">{summary.incomeChange}</span>
                     </div>
-                    <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
-                      <span className="text-red-600 font-semibold">Refunds</span>
-                      <span className="text-lg">₱{Number(totalRefundedAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
-                      <span className="text-xs text-red-600">
+                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[110px]">
+                      <span className="text-red-600 font-semibold text-sm md:text-base">Refunds</span>
+                      <span className="text-base md:text-lg">
+                        ₱{Number(totalRefundedAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className="text-[10px] md:text-xs text-red-600">
                         {totalRefundedAmount > 0 ? `↑ ₱${Number(totalRefundedAmount).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} refunded` : "—"}
                       </span>
                     </div>
-                    <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
-                      <span className="text-green-600 font-semibold">Net Profit</span>
-                      <span className="text-lg">{fmtPHP(apiSummary.total_amount)}</span>
-                      <span className="text-xs text-green-600">{summary.profitChange}</span>
+                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[110px]">
+                      <span className="text-green-600 font-semibold text-sm md:text-base">Net Profit</span>
+                      <span className="text-base md:text-lg">{fmtPHP(apiSummary.total_amount)}</span>
+                      <span className="text-[10px] md:text-xs text-green-600">{summary.profitChange}</span>
                     </div>
                   </div>
                 </div>
