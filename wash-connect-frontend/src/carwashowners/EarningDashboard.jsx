@@ -213,7 +213,7 @@ export default function EarningDashboard() {
     return acc;
   }, {});
 
-  // Combine payments details with refunds for display/export (does not affect analytics)
+  // Combine payments details with refunds for display/export
   const detailsWithRefunds = useMemo(() => {
     const toDateStr = (s) => {
       const d = new Date(s);
@@ -229,7 +229,7 @@ export default function EarningDashboard() {
     return [...details, ...refundRows].sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [details, refunds]);
 
-  // Prepare Net Income Trend chart data (Bar chart for last 6 months)
+  // Net Income Trend chart
   const trendLabels = trend.map((month) => month.short);
   const trendValues = trend.map((month) => month.value);
   const trendBarData = {
@@ -245,7 +245,7 @@ export default function EarningDashboard() {
     ],
   };
 
-  // Count finished services (each service with at least one finished booking)
+  // Finished services count
   const finishedServicesCount = useMemo(() => {
     if (!services.length || !payments.length) return 0;
     return services.filter(svc =>
@@ -264,12 +264,12 @@ export default function EarningDashboard() {
     .filter(r => r.status === "Approved")
     .reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
-  // Chart data
+  // Charts
   const doughnutData = {
     labels: ["Income", "Refund"],
     datasets: [
       {
-        data: [totalIncome, totalRefundedAmount], // <-- use totalRefundedAmount here
+        data: [totalIncome, totalRefundedAmount],
         backgroundColor: ["#34d399", "#f87171"],
       },
     ],
@@ -319,7 +319,6 @@ export default function EarningDashboard() {
           <div className="flex items-center gap-2 mt-2 px-2 py-1 bg-blue-100 text-blue-700 font-semibold rounded cursor-pointer transition-colors duration-200" onClick={() => navigate('/earning-dashboard')}>
             <FaTrophy className="text-lg" /><span>Earnings Dashboard</span>
           </div>
-          {/* Add Request Refund below Earnings Dashboard */}
           <div className="flex items-center gap-2 mt-2 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200" onClick={() => navigate('/refund-request')}>
             <FaRegFolderOpen className="text-lg" />
             <span>Request Refund</span>
@@ -369,264 +368,267 @@ export default function EarningDashboard() {
 
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
-            <div className={`grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 ${activeTab === "dashboard" ? "" : ""}`}>
-          {activeTab === "dashboard" ? (
-            <React.Fragment>
-              {/* Summary Section */}
-              <section className="lg:col-span-2 space-y-4 md:space-y-6 min-w-0">
-                <div className="flex gap-4 md:gap-6 flex-wrap">
-                  <div className="flex-1 min-w-[280px] bg-white rounded-xl shadow p-4 md:p-6 flex flex-col gap-2">
-                    <h2 className="text-lg md:text-xl font-semibold">{summary.carwashName}</h2>
-                    <div className="flex items-center gap-4">
-                      <span className="text-gray-500 truncate">Track bookings and manage CRM here...</span>
-                      <span className="ml-auto text-xs md:text-sm text-gray-400">Date: {summary.month}</span>
-                    </div>
-                    <div className="flex items-center gap-6 md:gap-8 mt-3">
-                      <div>
-                        <span className="font-bold text-lg">{finishedServicesCount}</span>
-                        <span className="text-xs text-gray-500 ml-1">/ {services.length} services</span>
+          <div className="mx-auto w-full max-w-6xl p-4 md:p-5 lg:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+              {activeTab === "dashboard" ? (
+                <React.Fragment>
+                  {/* Summary Section */}
+                  <section className="lg:col-span-2 space-y-4 md:space-y-6 min-w-0">
+                    <div className="flex gap-4 md:gap-6 flex-wrap">
+                      <div className="flex-1 min-w-[280px] bg-white rounded-xl shadow p-4 md:p-6 flex flex-col gap-2">
+                        <h2 className="text-lg md:text-xl font-semibold">{summary.carwashName}</h2>
+                        <div className="flex items-center gap-4">
+                          <span className="text-gray-500 truncate">Track bookings and manage CRM here...</span>
+                          <span className="ml-auto text-xs md:text-sm text-gray-400 whitespace-nowrap">Date: {summary.month}</span>
+                        </div>
+                        <div className="flex items-center gap-6 md:gap-8 mt-3">
+                          <div>
+                            <span className="font-bold text-lg">{finishedServicesCount}</span>
+                            <span className="text-xs text-gray-500 ml-1">/ {services.length} services</span>
+                          </div>
+                          <div>
+                            <span className="font-bold text-lg">{summary.efficiency}</span>
+                            <span className="text-xs text-gray-500 ml-1">Efficiency</span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-bold text-lg">{summary.efficiency}</span>
-                        <span className="text-xs text-gray-500 ml-1">Efficiency</span>
+                      <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-xl shadow flex items-center justify-center overflow-hidden">
+                        <img
+                          src={carwash.logo || "/default-logo.png"}
+                          alt="Carwash Logo"
+                          className="w-20 h-20 md:w-28 md:h-28 object-contain"
+                          onError={(e) => { e.currentTarget.src = "/default-logo.png"; }}
+                        />
                       </div>
                     </div>
-                  </div>
-                  <div className="w-28 h-28 md:w-36 md:h-36 bg-white rounded-xl shadow flex items-center justify-center overflow-hidden">
-                    <img
-                      src={carwash.logo || "/default-logo.png"}
-                      alt="Carwash Logo"
-                      className="w-24 h-24 md:w-28 md:h-28 object-contain"
-                      onError={(e) => { e.currentTarget.src = "/default-logo.png"; }}
-                    />
-                  </div>
-                </div>
 
-                {/* Best/Lowest Month & Income/Expense/Profit */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                  <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
-                    <span className="text-green-600 font-semibold">Best Month</span>
-                    <span className="text-base md:text-lg">{summary.bestMonth?.name}</span>
-                    <span className="text-xs text-gray-500">Net Profit: {fmtPHP(summary.bestMonth?.profit || 0)}</span>
-                  </div>
-                  <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
-                    <span className="text-red-600 font-semibold">Lowest Month</span>
-                    <span className="text-base md:text-lg">{summary.lowestMonth?.name}</span>
-                    <span className="text-xs text-gray-500">Net Profit: {fmtPHP(summary.lowestMonth?.profit || 0)}</span>
-                  </div>
-                  {/* KPIs: compact, no-wrap labels; stack on small, 3 across >= md */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
-                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[96px]">
-                      <span className="text-blue-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Total Income</span>
-                      <span className="text-base md:text-lg leading-none">{fmtPHP(apiSummary.total_paid)}</span>
-                      <span className="mt-1 text-[10px] md:text-xs text-green-600 leading-none">{summary.incomeChange}</span>
+                    {/* Best/Lowest + KPIs */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+                      {/* 1. Best Month */}
+                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                        <span className="text-green-600 font-semibold whitespace-nowrap">Best Month</span>
+                        <span className="text-base md:text-lg leading-tight">{summary.bestMonth?.name}</span>
+                        <span className="text-xs text-gray-500 leading-none">Net Profit: {fmtPHP(summary.bestMonth?.profit || 0)}</span>
+                      </div>
+                      {/* 2. Lowest Month */}
+                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                        <span className="text-red-600 font-semibold whitespace-nowrap">Lowest Month</span>
+                        <span className="text-base md:text-lg leading-tight">{summary.lowestMonth?.name}</span>
+                        <span className="text-xs text-gray-500 leading-none">Net Profit: {fmtPHP(summary.lowestMonth?.profit || 0)}</span>
+                      </div>
+                      {/* 3. Total Income */}
+                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                        <span className="text-blue-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Total Income</span>
+                        <span className="text-base md:text-lg leading-none">{fmtPHP(apiSummary.total_paid)}</span>
+                        <span className="mt-1 text-[10px] md:text-xs text-green-600 leading-none">{summary.incomeChange}</span>
+                      </div>
+                      {/* 4. Refunds */}
+                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                        <span className="text-red-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Refunds</span>
+                        <span className="text-base md:text-lg leading-none">
+                          ₱{Number(totalRefundedAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="mt-1 text-[10px] md:text-xs text-red-600 leading-none">
+                          {totalRefundedAmount > 0 ? `↑ ₱${Number(totalRefundedAmount).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} refunded` : "—"}
+                        </span>
+                      </div>
+                      {/* 5. Net Profit */}
+                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                        <span className="text-green-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Net Profit</span>
+                        <span className="text-base md:text-lg leading-none">{fmtPHP(apiSummary.total_amount)}</span>
+                        <span className="mt-1 text-[10px] md:text-xs text-green-600 leading-none">{summary.profitChange}</span>
+                      </div>
                     </div>
-                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[96px]">
-                      <span className="text-red-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Refunds</span>
-                      <span className="text-base md:text-lg leading-none">
-                        ₱{Number(totalRefundedAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                      </span>
-                      <span className="mt-1 text-[10px] md:text-xs text-red-600 leading-none">
-                        {totalRefundedAmount > 0 ? `↑ ₱${Number(totalRefundedAmount).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} refunded` : "—"}
-                      </span>
-                    </div>
-                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[96px]">
-                      <span className="text-green-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Net Profit</span>
-                      <span className="text-base md:text-lg leading-none">{fmtPHP(apiSummary.total_amount)}</span>
-                      <span className="mt-1 text-[10px] md:text-xs text-green-600 leading-none">{summary.profitChange}</span>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Net Income Trend */}
-                <div className="bg-white rounded-xl shadow p-4 md:p-6">
-                   <h4 className="font-semibold mb-2">Net Income Trend (Last 6 Months)</h4>
-                  <div className="w-full h-40 md:h-48"> {/* lower height to fit laptops */}
-                     <Bar
-                       data={trendBarData}
-                       options={{
-                         responsive: true,
-                         maintainAspectRatio: false,
-                         plugins: {
-                           legend: { display: false },
-                           tooltip: { callbacks: { label: (ctx) => `₱${ctx.parsed.y.toLocaleString()}` } },
-                         },
-                         scales: {
-                           y: {
-                             beginAtZero: true,
-                             ticks: { callback: (value) => `₱${value.toLocaleString()}` },
-                           },
-                         },
-                       }}
-                     />
-                   </div>
-                 </div>
-              </section>
-
-              {/* Income & Expense Details + Analytics Charts */}
-              <section className="lg:col-span-1 space-y-4 md:space-y-6 min-w-0">
-                <div className="bg-white rounded-xl shadow p-4 md:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-semibold">Income & Refund Details</h4>
-                    <button
-                      className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs font-medium hover:bg-gray-200"
-                      onClick={() => {
-                        const rows = [
-                          ["Date", "Type", "Description", "Amount", "Status"],
-                          ...detailsWithRefunds.map((r) => [r.date, r.type, r.description, r.amount, r.status]),
-                        ];
-                        const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
-                        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = `earnings_${carwash.carwashName.replace(/\s+/g, "_")}.csv`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                    >
-                      <FaDownload className="text-sm" /> Export
-                    </button>
-                  </div>
-                  <div className="max-h-60 overflow-auto">
-                    <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-white z-10">
-                        <tr className="text-gray-500">
-                          <th className="py-2 text-left">Date</th>
-                          <th className="py-2 text-left">Type</th>
-                          <th className="py-2 text-left">Description</th>
-                          <th className="py-2 text-left">Amount</th>
-                          <th className="py-2 text-left">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {detailsWithRefunds.map((row, idx) => (
-                          <tr key={idx} className="border-t">
-                            <td className="py-2">{row.date}</td>
-                            <td className="py-2">
-                              <span
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                                  row.type === "Income"
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {row.type}
-                              </span>
-                            </td>
-                            <td className="py-2">{row.description}</td>
-                            <td className="py-2">{fmtPHP(row.amount)}</td>
-                            <td className="py-2">
-                              <span
-                                className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                  row.status === "Completed"
-                                    ? "bg-green-200 text-green-800"
-                                    : row.status === "Refunded"
-                                    ? "bg-red-200 text-red-800"
-                                    : row.status === "Approved"
-                                    ? "bg-green-200 text-green-800"
-                                    : row.status === "Rejected"
-                                    ? "bg-red-200 text-red-800"
-                                    : row.status === "Pending"
-                                    ? "bg-yellow-200 text-yellow-800"
-                                    : "bg-gray-200 text-gray-800"
-                                }`}
-                              >
-                                {row.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                        {detailsWithRefunds.length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="text-center text-gray-400 py-4">No data available.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex flex-col items-center">
-                    <h4 className="font-semibold mb-2">Income vs Refund</h4>
-                    <div className="w-full max-w-[140px] h-[120px]">
-                      <Doughnut data={doughnutData} options={{ maintainAspectRatio: false }} />
-                    </div>
-                    <div className="mt-2 text-center text-xs">
-                      <span className="text-green-600 font-bold">Income: {fmtPHP(totalIncome)}</span>
-                      <br />
-                      <span className="text-red-600 font-bold">Refund: {fmtPHP(totalRefundedAmount)}</span>
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex flex-col items-center">
-                    <h4 className="font-semibold mb-2">Payments by Status</h4>
-                    <div className="w-full max-w-[160px] h-[120px]">
-                      <Bar
-                        data={barData}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: { legend: { display: false } },
-                          scales: {
-                            y: {
-                              beginAtZero: true,
-                              ticks: { callback: (value) => `₱${value.toLocaleString()}` },
+                    {/* Net Income Trend */}
+                    <div className="bg-white rounded-xl shadow p-4 md:p-6">
+                      <h4 className="font-semibold mb-2">Net Income Trend (Last 6 Months)</h4>
+                      <div className="w-full h-36 md:h-44">
+                        <Bar
+                          data={trendBarData}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: { display: false },
+                              tooltip: { callbacks: { label: (ctx) => `₱${ctx.parsed.y.toLocaleString()}` } },
                             },
-                          },
-                        }}
-                      />
+                            scales: {
+                              y: {
+                                beginAtZero: true,
+                                ticks: { callback: (value) => `₱${value.toLocaleString()}` },
+                              },
+                            },
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Details + small charts */}
+                  <section className="lg:col-span-1 space-y-4 md:space-y-6 min-w-0">
+                    <div className="bg-white rounded-xl shadow p-4 md:p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-semibold">Income & Refund Details</h4>
+                        <button
+                          className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs font-medium hover:bg-gray-200"
+                          onClick={() => {
+                            const rows = [
+                              ["Date", "Type", "Description", "Amount", "Status"],
+                              ...detailsWithRefunds.map((r) => [r.date, r.type, r.description, r.amount, r.status]),
+                            ];
+                            const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+                            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `earnings_${carwash.carwashName.replace(/\s+/g, "_")}.csv`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                        >
+                          <FaDownload className="text-sm" /> Export
+                        </button>
+                      </div>
+                      <div className="max-h-56 overflow-auto">
+                        <table className="w-full text-sm">
+                          <thead className="sticky top-0 bg-white z-10">
+                            <tr className="text-gray-500">
+                              <th className="py-2 text-left">Date</th>
+                              <th className="py-2 text-left">Type</th>
+                              <th className="py-2 text-left">Description</th>
+                              <th className="py-2 text-left">Amount</th>
+                              <th className="py-2 text-left">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detailsWithRefunds.map((row, idx) => (
+                              <tr key={idx} className="border-t">
+                                <td className="py-2">{row.date}</td>
+                                <td className="py-2">
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                                      row.type === "Income"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-red-100 text-red-700"
+                                    }`}
+                                  >
+                                    {row.type}
+                                  </span>
+                                </td>
+                                <td className="py-2">{row.description}</td>
+                                <td className="py-2">{fmtPHP(row.amount)}</td>
+                                <td className="py-2">
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                      row.status === "Completed"
+                                        ? "bg-green-200 text-green-800"
+                                        : row.status === "Refunded"
+                                        ? "bg-red-200 text-red-800"
+                                        : row.status === "Approved"
+                                        ? "bg-green-200 text-green-800"
+                                        : row.status === "Rejected"
+                                        ? "bg-red-200 text-red-800"
+                                        : row.status === "Pending"
+                                        ? "bg-yellow-200 text-yellow-800"
+                                        : "bg-gray-200 text-gray-800"
+                                    }`}
+                                  >
+                                    {row.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                            {detailsWithRefunds.length === 0 && (
+                              <tr>
+                                <td colSpan={5} className="text-center text-gray-400 py-4">No data available.</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 md:gap-4">
+                      <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex flex-col items-center">
+                        <h4 className="font-semibold mb-2">Income vs Refund</h4>
+                        <div className="w-full max-w-[120px] h-[110px]">
+                          <Doughnut data={doughnutData} options={{ maintainAspectRatio: false }} />
+                        </div>
+                        <div className="mt-2 text-center text-xs">
+                          <span className="text-green-600 font-bold">Income: {fmtPHP(totalIncome)}</span>
+                          <br />
+                          <span className="text-red-600 font-bold">Refund: {fmtPHP(totalRefundedAmount)}</span>
+                        </div>
+                      </div>
+                      <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex flex-col items-center">
+                        <h4 className="font-semibold mb-2">Payments by Status</h4>
+                        <div className="w-full max-w-[140px] h-[110px]">
+                          <Bar
+                            data={barData}
+                            options={{
+                              responsive: true,
+                              maintainAspectRatio: false,
+                              plugins: { legend: { display: false } },
+                              scales: {
+                                y: {
+                                  beginAtZero: true,
+                                  ticks: { callback: (value) => `₱${value.toLocaleString()}` },
+                                },
+                              },
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </React.Fragment>
+              ) : (
+                <section className="lg:col-span-3">
+                  <div className="bg-white rounded-xl shadow p-4 md:p-6 mt-2 md:mt-4">
+                    <h4 className="font-semibold mb-4">Refund Requests</h4>
+                    <div className="rounded-lg border border-gray-100 overflow-auto max-h-[60vh]">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 sticky top-0 z-10">
+                          <tr className="text-gray-500">
+                            <th className="py-2 text-left">Customer</th>
+                            <th className="py-2 text-left">Amount</th>
+                            <th className="py-2 text-left">Reason</th>
+                            <th className="py-2 text-left">Status</th>
+                            <th className="py-2 text-left">Requested At</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {refunds.map((r) => (
+                            <tr key={r.id} className="border-t">
+                              <td className="py-2">{r.customer}</td>
+                              <td className="py-2">₱{Number(r.amount || 0).toFixed(2)}</td>
+                              <td className="py-2">{r.reason}</td>
+                              <td className="py-2">
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                  r.status === "Approved"
+                                    ? "bg-green-200 text-green-800"
+                                    : r.status === "Rejected"
+                                    ? "bg-red-200 text-red-800"
+                                    : "bg-yellow-200 text-yellow-800"
+                                }`}>
+                                  {r.status}
+                                </span>
+                              </td>
+                              <td className="py-2">{r.requestedAt ? r.requestedAt.slice(0, 19).replace("T", " ") : ""}</td>
+                            </tr>
+                          ))}
+                          {refunds.length === 0 && (
+                            <tr>
+                              <td colSpan={5} className="text-center text-gray-400 py-4">No refund requests.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                </div>
-              </section>
-            </React.Fragment>
-          ) : (
-            <section className="lg:col-span-3">
-              <div className="bg-white rounded-xl shadow p-4 md:p-6 mt-2 md:mt-4">
-                <h4 className="font-semibold mb-4">Refund Requests</h4>
-               <div className="rounded-lg border border-gray-100 overflow-auto max-h-[60vh]">
-                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 sticky top-0 z-10">
-                     <tr className="text-gray-500">
-                       <th className="py-2 text-left">Customer</th>
-                       <th className="py-2 text-left">Amount</th>
-                       <th className="py-2 text-left">Reason</th>
-                       <th className="py-2 text-left">Status</th>
-                       <th className="py-2 text-left">Requested At</th>
-                     </tr>
-                  </thead>
-                   <tbody>
-                     {refunds.map((r) => (
-                       <tr key={r.id} className="border-t">
-                         <td className="py-2">{r.customer}</td>
-                         <td className="py-2">₱{Number(r.amount || 0).toFixed(2)}</td>
-                         <td className="py-2">{r.reason}</td>
-                         <td className="py-2">
-                           <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                             r.status === "Approved"
-                               ? "bg-green-200 text-green-800"
-                               : r.status === "Rejected"
-                               ? "bg-red-200 text-red-800"
-                               : "bg-yellow-200 text-yellow-800"
-                           }`}>
-                             {r.status}
-                           </span>
-                         </td>
-                         <td className="py-2">{r.requestedAt ? r.requestedAt.slice(0, 19).replace("T", " ") : ""}</td>
-                       </tr>
-                     ))}
-                     {refunds.length === 0 && (
-                       <tr>
-                         <td colSpan={5} className="text-center text-gray-400 py-4">No refund requests.</td>
-                       </tr>
-                     )}
-                   </tbody>
-                 </table>
-               </div>
-              </div>
-            </section>
-          )}
+                </section>
+              )}
             </div>
           </div>
         </div>
