@@ -393,13 +393,18 @@ export default function EarningDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="w-28 h-28 md:w-36 md:h-36 bg-white rounded-xl shadow flex items-center justify-center">
-                    <img src={carwash.logo || "/default-logo.png"} alt="Carwash Logo" className="w-24 h-24 md:w-28 md:h-28 object-contain" />
+                  <div className="w-28 h-28 md:w-36 md:h-36 bg-white rounded-xl shadow flex items-center justify-center overflow-hidden">
+                    <img
+                      src={carwash.logo || "/default-logo.png"}
+                      alt="Carwash Logo"
+                      className="w-24 h-24 md:w-28 md:h-28 object-contain"
+                      onError={(e) => { e.currentTarget.src = "/default-logo.png"; }}
+                    />
                   </div>
                 </div>
 
                 {/* Best/Lowest Month & Income/Expense/Profit */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                   <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
                     <span className="text-green-600 font-semibold">Best Month</span>
                     <span className="text-base md:text-lg">{summary.bestMonth?.name}</span>
@@ -410,53 +415,53 @@ export default function EarningDashboard() {
                     <span className="text-base md:text-lg">{summary.lowestMonth?.name}</span>
                     <span className="text-xs text-gray-500">Net Profit: {fmtPHP(summary.lowestMonth?.profit || 0)}</span>
                   </div>
-                  {/* KPIs: stack on small, 3 across from md */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[110px]">
-                      <span className="text-blue-600 font-semibold text-sm md:text-base">Total Income</span>
-                      <span className="text-base md:text-lg">{fmtPHP(apiSummary.total_paid)}</span>
-                      <span className="text-[10px] md:text-xs text-green-600">{summary.incomeChange}</span>
+                  {/* KPIs: compact, no-wrap labels; stack on small, 3 across >= md */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[96px]">
+                      <span className="text-blue-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Total Income</span>
+                      <span className="text-base md:text-lg leading-none">{fmtPHP(apiSummary.total_paid)}</span>
+                      <span className="mt-1 text-[10px] md:text-xs text-green-600 leading-none">{summary.incomeChange}</span>
                     </div>
-                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[110px]">
-                      <span className="text-red-600 font-semibold text-sm md:text-base">Refunds</span>
-                      <span className="text-base md:text-lg">
+                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[96px]">
+                      <span className="text-red-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Refunds</span>
+                      <span className="text-base md:text-lg leading-none">
                         ₱{Number(totalRefundedAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>
-                      <span className="text-[10px] md:text-xs text-red-600">
+                      <span className="mt-1 text-[10px] md:text-xs text-red-600 leading-none">
                         {totalRefundedAmount > 0 ? `↑ ₱${Number(totalRefundedAmount).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} refunded` : "—"}
                       </span>
                     </div>
-                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[110px]">
-                      <span className="text-green-600 font-semibold text-sm md:text-base">Net Profit</span>
-                      <span className="text-base md:text-lg">{fmtPHP(apiSummary.total_amount)}</span>
-                      <span className="text-[10px] md:text-xs text-green-600">{summary.profitChange}</span>
+                    <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[96px]">
+                      <span className="text-green-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Net Profit</span>
+                      <span className="text-base md:text-lg leading-none">{fmtPHP(apiSummary.total_amount)}</span>
+                      <span className="mt-1 text-[10px] md:text-xs text-green-600 leading-none">{summary.profitChange}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Net Income Trend */}
                 <div className="bg-white rounded-xl shadow p-4 md:p-6">
-                  <h4 className="font-semibold mb-2">Net Income Trend (Last 6 Months)</h4>
-                  <div className="w-full h-44 md:h-56">
-                    <Bar
-                      data={trendBarData}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: { display: false },
-                          tooltip: { callbacks: { label: (ctx) => `₱${ctx.parsed.y.toLocaleString()}` } },
-                        },
-                        scales: {
-                          y: {
-                            beginAtZero: true,
-                            ticks: { callback: (value) => `₱${value.toLocaleString()}` },
-                          },
-                        },
-                      }}
-                    />
-                  </div>
-                </div>
+                   <h4 className="font-semibold mb-2">Net Income Trend (Last 6 Months)</h4>
+                  <div className="w-full h-40 md:h-48"> {/* lower height to fit laptops */}
+                     <Bar
+                       data={trendBarData}
+                       options={{
+                         responsive: true,
+                         maintainAspectRatio: false,
+                         plugins: {
+                           legend: { display: false },
+                           tooltip: { callbacks: { label: (ctx) => `₱${ctx.parsed.y.toLocaleString()}` } },
+                         },
+                         scales: {
+                           y: {
+                             beginAtZero: true,
+                             ticks: { callback: (value) => `₱${value.toLocaleString()}` },
+                           },
+                         },
+                       }}
+                     />
+                   </div>
+                 </div>
               </section>
 
               {/* Income & Expense Details + Analytics Charts */}
