@@ -29,8 +29,8 @@ function Register() {
     }));
   };
 
-  // Use your deployed backend base URL
-  const API_BASE = "https://wash-connect-7.onrender.com";
+  // Use your local backend during development
+  const API_BASE = "http://localhost:3000";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,9 +57,7 @@ function Register() {
     try {
       const response = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           first_name: formData.firstName,
           last_name: formData.lastName,
