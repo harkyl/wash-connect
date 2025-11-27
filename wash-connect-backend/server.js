@@ -44,7 +44,9 @@ app.use(cors({
     if (!origin || ['http://localhost:5173', 'https://wash-connect-gmim.vercel.app'].includes(origin)) return cb(null, true);
     return cb(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
 
