@@ -8,6 +8,12 @@ export default function BookingHistory() {
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
 
+  // Cache of customer_email -> avatar URL
+  const [avatarMap, setAvatarMap] = useState({});
+
+  const getUiAvatar = (name) =>
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("token");
@@ -62,6 +68,40 @@ export default function BookingHistory() {
       pageItems: bookingHistory.slice(start, start + size),
     };
   }, [bookingHistory, currentPage]);
+
+  // Fetch avatars for visible bookings (by customer email). Adjust endpoint if needed.
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const toFetch = pageItems
+      .map((b) => b.customer_email)
+      .filter((email) => email && !avatarMap[email]);
+
+    if (toFetch.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      for (const email of toFetch) {
+        try {
+          const res = await fetch(
+            `http://localhost:3000/api/customers/avatar?email=${encodeURIComponent(email)}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (!res.ok) continue;
+          const data = await res.json();
+          const url = data?.avatarUrl || data?.avatar || data?.url;
+          if (url && !cancelled) {
+            setAvatarMap((prev) => ({ ...prev, [email]: url }));
+          }
+        } catch {
+          // ignore and rely on fallback
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pageItems, avatarMap]);
 
   // Clamp current page when data changes
   useEffect(() => {
@@ -171,71 +211,88 @@ export default function BookingHistory() {
               {bookingHistory.length === 0 && (
                 <div className="text-gray-500 text-center">No booking history found.</div>
               )}
-              {pageItems.map((booking) => (
-                <div key={booking.appointment_id} className="flex flex-col md:flex-row items-start md:items-center bg-white border border-gray-200 rounded-xl shadow p-4 gap-4 relative">
-                  <img
-                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(`${booking.customer_first_name || ""} ${booking.customer_last_name || ""}`)}`}
-                    alt=""
-                    className="w-14 h-14 rounded-full object-cover border-2 border-white shadow"
-                  />
-                  <div className="flex-1 flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-base">{`${booking.customer_first_name || ""} ${booking.customer_last_name || ""}`}</span>
-                      <span className="text-xs text-gray-500">Customer</span>
-                      <span className="ml-auto flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">{booking.status || "Completed"}</span>
-                    </div>
-                    {/* Show booking creation date/time if available */}
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>
-                        Booked: {booking.created_at
-                          ? new Date(booking.created_at).toLocaleDateString() +
-                            " " +
-                            new Date(booking.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          : new Date(booking.schedule_date).toLocaleDateString() +
-                            " " +
-                            new Date(booking.schedule_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    {/* Show scheduled date and time */}
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>
-                        Scheduled: {booking.schedule_date
-                          ? new Date(booking.schedule_date).toLocaleDateString()
-                          : "N/A"}
-                        {booking.schedule_time && (
-                          <span className="ml-2">
-                            | Time: {booking.schedule_time}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm mt-1">
-                      <span className="font-semibold">Address:</span>
-                      <span className="truncate">{booking.address}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold">Services:</span>
-                      <span className="truncate">{booking.service_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold">Vehicle:</span>
-                      <span className="truncate">
-                        {booking.vehicle_type || booking.vehicleType || "Motorcycle"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold">Vehicle Model:</span>
-                      <span className="truncate">
-                        {booking.vehicle_model || booking.vehicleModel || "N/A"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold">Email:</span>
-                      <span className="truncate">{booking.customer_email}</span>
+              {pageItems.map((booking) => {
+                const displayName = `${booking.customer_first_name || ""} ${booking.customer_last_name || ""}`.trim() || "Customer";
+                const email = booking.customer_email;
+                const fallbackAvatar = getUiAvatar(displayName);
+                const resolvedAvatar =
+                  (email && avatarMap[email]) ||
+                  booking.customer_avatar ||
+                  booking.customer_avatar_url ||
+                  booking.avatarUrl ||
+                  fallbackAvatar;
+
+                return (
+                  <div key={booking.appointment_id} className="flex flex-col md:flex-row items-start md:items-center bg-white border border-gray-200 rounded-xl shadow p-4 gap-4 relative">
+                    <img
+                      src={resolvedAvatar}
+                      alt={displayName}
+                      className="w-14 h-14 rounded-full object-cover border-2 border-white shadow"
+                      onError={(e) => {
+                        if (e.currentTarget.src !== fallbackAvatar) {
+                          e.currentTarget.src = fallbackAvatar;
+                        }
+                      }}
+                    />
+                    <div className="flex-1 flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-base">{displayName}</span>
+                        <span className="text-xs text-gray-500">Customer</span>
+                        <span className="ml-auto flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">{booking.status || "Completed"}</span>
+                      </div>
+                      {/* Show booking creation date/time if available */}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>
+                          Booked: {booking.created_at
+                            ? new Date(booking.created_at).toLocaleDateString() +
+                              " " +
+                              new Date(booking.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            : new Date(booking.schedule_date).toLocaleDateString() +
+                              " " +
+                              new Date(booking.schedule_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      {/* Show scheduled date and time */}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>
+                          Scheduled: {booking.schedule_date
+                            ? new Date(booking.schedule_date).toLocaleDateString()
+                            : "N/A"}
+                          {booking.schedule_time && (
+                            <span className="ml-2">
+                              | Time: {booking.schedule_time}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm mt-1">
+                        <span className="font-semibold">Address:</span>
+                        <span className="truncate">{booking.address}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold">Services:</span>
+                        <span className="truncate">{booking.service_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold">Vehicle:</span>
+                        <span className="truncate">
+                          {booking.vehicle_type || booking.vehicleType || "Motorcycle"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold">Vehicle Model:</span>
+                        <span className="truncate">
+                          {booking.vehicle_model || booking.vehicleModel || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold">Email:</span>
+                        <span className="truncate">{booking.customer_email}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Pagination (max 4 pages) */}

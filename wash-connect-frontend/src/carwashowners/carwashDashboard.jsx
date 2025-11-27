@@ -19,10 +19,10 @@ export default function CarwashDashboard() {
     const navigate = useNavigate();
     // NEW: selected booking for details modal
     const [selectedBooking, setSelectedBooking] = useState(null);
-    const [customerContact, setCustomerContact] = useState(""); // NEW
+      const [customerContact, setCustomerContact] = useState(""); // NEW
 
-  useEffect(() => {
-        const fetchData = async () => {
+    useEffect(() => {
+          const fetchData = async () => {
             const token = localStorage.getItem("token");
             if (!token) {
                 navigate("/carwash-login");
@@ -258,14 +258,20 @@ export default function CarwashDashboard() {
 			<main className="flex-1 flex flex-col min-w-0 overflow-y-auto"> 
 				{/* Header */}
 				<header className="flex items-center justify-between px-8 py-4 bg-blue-100 border-b sticky top-0 z-10">
-					<div className="flex items-center gap-4">
-						<h1 className="text-2xl font-semibold">Overview</h1>
-					</div>
-					<div className="flex items-center gap-2">
-						<span className="text-gray-500">Owner</span>
-						<FaUserCircle className="text-2xl text-gray-400" />
-					</div>
-				</header>
+  <div className="flex items-center gap-4">
+    <h1 className="text-2xl font-semibold">Overview</h1>
+  </div>
+  <div className="flex items-center gap-2">
+    <FaUserCircle
+      className="text-2xl text-gray-600"
+      title={ownerData ? `${ownerData.first_name || ""} ${ownerData.last_name || ""}`.trim() : "Owner"}
+      aria-label={ownerData ? `${ownerData.first_name || ""} ${ownerData.last_name || ""}`.trim() : "Owner"}
+    />
+    <span className="text-gray-700 font-medium">
+      {ownerData ? `${ownerData.first_name || ""} ${ownerData.last_name || ""}`.trim() || "Owner" : "Owner"}
+    </span>
+  </div>
+</header>
 
 				{/* Main Grid */}
 				<div className="flex-1 grid grid-cols-3 gap-6 p-8">

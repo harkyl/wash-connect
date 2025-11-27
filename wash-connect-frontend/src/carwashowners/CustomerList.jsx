@@ -2,6 +2,73 @@ import React, { useEffect, useState } from "react";
 import { FaUserCircle, FaMapMarkerAlt, FaEnvelope, FaSearch, FaUsers, FaUser, FaCalendarAlt, FaSignOutAlt, FaRegEnvelope, FaRegUser, FaRegCheckSquare, FaRegFolderOpen, FaTrophy, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
+// NEW: helpers to normalize avatars and enrich list with fetched avatars
+const normalizeAvatarUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("/uploads")) return `http://localhost:3000${url}`;
+  return url;
+};
+
+const nameFor = (c) =>
+  (c.customer_name ||
+    `${c.customer_first_name || ""} ${c.customer_last_name || ""}` ||
+    "").trim();
+
+async function enrichAvatars(customers, token) {
+  const cache = new Map(); // key -> url
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const result = await Promise.all(
+    customers.map(async (c) => {
+      // If avatar already present, just normalize it
+      if (c.avatar) {
+        return { ...c, avatar: normalizeAvatarUrl(c.avatar) };
+      }
+
+      const key = c.user_id || c.userId || c.customer_email || c.email;
+      if (!key) {
+        return {
+          ...c,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(nameFor(c))}`,
+        };
+      }
+
+      if (cache.has(key)) {
+        return { ...c, avatar: cache.get(key) };
+      }
+
+      try {
+        let res;
+        if (c.user_id || c.userId) {
+          const id = c.user_id || c.userId;
+          res = await fetch(`http://localhost:3000/api/users/${id}`, { headers });
+        } else if (c.customer_email || c.email) {
+          const email = encodeURIComponent(c.customer_email || c.email);
+          res = await fetch(`http://localhost:3000/api/users/by-email?email=${email}`, { headers });
+        }
+
+        if (res && res.ok) {
+          const user = await res.json();
+          const url = normalizeAvatarUrl(user.avatar || user.profileImage || "");
+          const finalUrl =
+            url || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameFor(c))}`;
+          cache.set(key, finalUrl);
+          return { ...c, avatar: finalUrl };
+        }
+      } catch {
+        // ignore and use fallback
+      }
+
+      const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameFor(c))}`;
+      cache.set(key, fallback);
+      return { ...c, avatar: fallback };
+    })
+  );
+
+  return result;
+};
+
+// ...existing code...
 const statusColors = {
   "New Customer": "border-blue-400 text-blue-600",
   "Repeat Customer": "border-green-400 text-green-600",
@@ -80,6 +147,8 @@ function CustomerList() {
   const navigate = useNavigate();
   // NEW: filter by stat box
   const [statusFilter, setStatusFilter] = useState("all"); // all | new | repeat
+  // NEW: owner name for header
+  const [ownerName, setOwnerName] = useState("Owner");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -91,8 +160,26 @@ function CustomerList() {
     const owner = JSON.parse(localStorage.getItem("carwashOwner"));
     if (!owner || !owner.id) return;
 
+    // Prime name from localStorage
+    const initialName = `${owner.owner_first_name || owner.first_name || ""} ${owner.owner_last_name || owner.last_name || ""}`.trim() || "Owner";
+    setOwnerName(initialName);
+
     (async () => {
       try {
+        // Fetch latest owner details
+        const ownerRes = await fetch(`http://localhost:3000/api/carwash-owners/${owner.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (ownerRes.status === 401) {
+          navigate("/carwash-login");
+          return;
+        }
+        if (ownerRes.ok) {
+          const od = await ownerRes.json();
+          const freshName = `${od.first_name || od.owner_first_name || ""} ${od.last_name || od.owner_last_name || ""}`.trim() || "Owner";
+          setOwnerName(freshName);
+        }
+
         const appRes = await fetch(`http://localhost:3000/api/carwash-applications/by-owner/${owner.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -113,7 +200,9 @@ function CustomerList() {
 
         if (aggRes.ok) {
           const agg = await aggRes.json();
-          setCustomers(Array.isArray(agg) ? agg : []);
+          const raw = Array.isArray(agg) ? agg : [];
+          const withAvatars = await enrichAvatars(raw, token); // NEW
+          setCustomers(withAvatars);
           return;
         }
 
@@ -128,7 +217,8 @@ function CustomerList() {
         const rows = await res.json();
         const hasStatus = Array.isArray(rows) && rows.some(r => typeof r.status === "string");
         const data = hasStatus ? rows : deriveCustomersFromBookings(rows);
-        setCustomers(Array.isArray(data) ? data : []);
+        const withAvatars = await enrichAvatars(Array.isArray(data) ? data : [], token); // NEW
+        setCustomers(withAvatars);
       } catch {
         setCustomers([]);
       }
@@ -251,8 +341,12 @@ function CustomerList() {
             <h1 className="text-2xl font-semibold">Customers & Employee</h1>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-500">Admin</span>
-            <FaUserCircle className="text-2xl text-gray-400" />
+            <FaUserCircle
+              className="text-2xl text-gray-600"
+              title={ownerName}
+              aria-label={ownerName}
+            />
+            <span className="text-gray-700 font-medium">{ownerName}</span>
           </div>
         </div>
         {/* Tabs and Stats */}

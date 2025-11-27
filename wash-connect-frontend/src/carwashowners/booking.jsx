@@ -2,6 +2,80 @@ import React, { useEffect, useState } from "react";
 import { FaMapMarkerAlt, FaRegEye, FaRegCheckSquare, FaTrophy, FaRegFolderOpen, FaFlagCheckered } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 
+// NEW: avatar helpers
+const normalizeAvatarUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("/uploads")) return `http://localhost:3000${url}`;
+  return url;
+};
+
+const nameForBooking = (b) =>
+  `${b?.customer_first_name || ""} ${b?.customer_last_name || ""}`.trim() ||
+  b?.customer_email ||
+  "User";
+
+async function enrichBookingAvatars(bookings, token) {
+  const cache = new Map();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const result = await Promise.all(
+    bookings.map(async (b) => {
+      // keep any existing avatar, just normalize
+      const existing =
+        b.avatar ||
+        b.customer_avatar ||
+        b.profile_image ||
+        b.profileImage ||
+        b.customerAvatar;
+      if (existing) return { ...b, avatar: normalizeAvatarUrl(existing) };
+
+      const key =
+        b.user_id ||
+        b.userId ||
+        b.customer_id ||
+        b.customerId ||
+        b.customer_email ||
+        b.email;
+
+      if (!key) {
+        return {
+          ...b,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForBooking(b))}`,
+        };
+      }
+
+      if (cache.has(key)) return { ...b, avatar: cache.get(key) };
+
+      try {
+        let res;
+        if (b.user_id || b.userId || b.customer_id || b.customerId) {
+          const id = b.user_id || b.userId || b.customer_id || b.customerId;
+          res = await fetch(`http://localhost:3000/api/users/${id}`, { headers });
+        } else if (b.customer_email || b.email) {
+          const email = encodeURIComponent(b.customer_email || b.email);
+          res = await fetch(`http://localhost:3000/api/users/by-email?email=${email}`, { headers });
+        }
+
+        if (res && res.ok) {
+          const user = await res.json();
+          const url = normalizeAvatarUrl(user.avatar || user.profileImage || user.profile_image || "");
+          const finalUrl = url || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForBooking(b))}`;
+          cache.set(key, finalUrl);
+          return { ...b, avatar: finalUrl };
+        }
+      } catch {
+        // ignore
+      }
+
+      const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForBooking(b))}`;
+      cache.set(key, fallback);
+      return { ...b, avatar: fallback };
+    })
+  );
+
+  return result;
+}
+
 const TABS = [
   { key: "overall", label: "Overall Booking" },
   { key: "pending", label: "Pending" },
@@ -262,7 +336,9 @@ function Bookings() {
             return det ? { ...b, ...det } : b;
           }));
 
-          setBookings(detailed);
+          // NEW: attach customer avatars
+          const withAvatars = await enrichBookingAvatars(detailed, token);
+          setBookings(withAvatars);
         }
       })
       .catch(() => setBookings([]));
@@ -436,9 +512,17 @@ function Bookings() {
                     <div key={key} className="bg-white rounded-xl border border-gray-300 p-4 flex flex-col gap-2 shadow">
                       <div className="flex items-center gap-3 mb-2">
                         <img
-                          src={booking.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.customer_first_name || "")}`}
-                          alt=""
+                          src={
+                            booking.avatar
+                              ? normalizeAvatarUrl(booking.avatar)
+                              : `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForBooking(booking))}`
+                          }
+                          alt={`${booking.customer_first_name || ""} ${booking.customer_last_name || ""}`.trim() || "Customer"}
                           className="w-12 h-12 rounded-full object-cover border"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForBooking(booking))}`;
+                          }}
                         />
                         <div>
                           <div className="font-semibold text-lg">{booking.customer_first_name} {booking.customer_last_name}</div>

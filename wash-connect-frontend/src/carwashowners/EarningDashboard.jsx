@@ -7,6 +7,7 @@ Chart.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Lege
 
 export default function EarningDashboard() {
   const navigate = useNavigate();
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [carwash, setCarwash] = useState({ carwashName: "Carwash", logo: "" });
@@ -293,7 +294,7 @@ export default function EarningDashboard() {
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r flex flex-col h-screen sticky top-0">
+      <aside className="hidden md:flex w-64 bg-white border-r flex-col h-screen sticky top-0">
         <div className="px-6 py-8">
           <div className="text-3xl flex items-center select-none">
             <span className="text-gray-700" style={{ fontFamily: '"Great Vibes", cursive', fontSize: "2.2rem" }}>Wash</span>
@@ -339,13 +340,46 @@ export default function EarningDashboard() {
         </div>
       </aside>
 
+      {/* Mobile drawer */}
+      <div className={`fixed inset-0 z-40 md:hidden ${isSidebarOpen ? "" : "pointer-events-none"}`}>
+        <div className={`absolute top-0 left-0 h-full w-64 bg-white border-r shadow transform transition-transform duration-300 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          <div className="px-4 py-4 border-b flex items-center justify-between">
+            <span className="text-xl font-semibold">Wash <span className="text-red-500">Connect</span></span>
+            <button className="p-2 rounded hover:bg-gray-100" onClick={() => setSidebarOpen(false)}>✕</button>
+          </div>
+          <nav className="p-3 space-y-2">
+            <button className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setSidebarOpen(false); navigate("/carwash-dashboard"); }}>
+              <FaRegEye className="text-lg" /> Overview
+            </button>
+            <button className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setSidebarOpen(false); navigate("/customer-list"); }}>
+              <span className="text-lg">★</span> Customers & Employee
+            </button>
+            <hr className="my-2" />
+            <button className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setSidebarOpen(false); navigate("/bookings"); }}>
+              <FaRegCheckSquare className="text-lg" /> Manage Bookings
+            </button>
+            <button className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setSidebarOpen(false); navigate("/booking-history"); }}>
+              <FaRegCheckSquare className="text-lg" /> Booking History
+            </button>
+            <button className="w-full flex items-center gap-2 px-3 py-2 rounded bg-blue-100 text-blue-700 font-semibold" onClick={() => { setSidebarOpen(false); navigate("/earning-dashboard"); }}>
+              <FaTrophy className="text-lg" /> Earnings Dashboard
+            </button>
+            <button className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setSidebarOpen(false); navigate("/refund-request"); }}>
+              <FaRegFolderOpen className="text-lg" /> Request Refund
+            </button>
+          </nav>
+        </div>
+        <div className={`absolute inset-0 bg-black/30 transition-opacity duration-300 ${isSidebarOpen ? "opacity-100" : "opacity-0"}`} onClick={() => setSidebarOpen(false)} />
+      </div>
+
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navigation Tabs */}
-        <header className="flex items-center justify-between px-4 md:px-6 lg:px-8 py-3 md:py-4 bg-blue-100 border-b sticky top-0 z-10">
+        <header className="flex items-center justify-between px-3 md:px-6 lg:px-8 py-3 md:py-4 bg-blue-100 border-b sticky top-0 z-10">
           <div className="flex items-center gap-4 min-w-0">
+            <button className="md:hidden p-2 rounded hover:bg-blue-200" onClick={() => setSidebarOpen(true)}>☰</button>
             <h1 className="text-xl md:text-2xl font-semibold truncate">Earnings Dashboard</h1>
-            <nav className="ml-4 md:ml-8 flex gap-2">
+            <nav className="ml-2 md:ml-8 flex gap-2">
               <button
                 className={`px-3 md:px-4 py-2 rounded ${activeTab === "dashboard" ? "bg-blue-600 text-white" : "bg-white text-blue-600 border"}`}
                 onClick={() => setActiveTab("dashboard")}
@@ -368,14 +402,14 @@ export default function EarningDashboard() {
 
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-6xl p-4 md:p-5 lg:p-6">
+          <div className="mx-auto w-full max-w-6xl p-3 md:p-5 lg:p-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
               {activeTab === "dashboard" ? (
                 <React.Fragment>
                   {/* Summary Section */}
                   <section className="lg:col-span-2 space-y-4 md:space-y-6 min-w-0">
-                    <div className="flex gap-4 md:gap-6 flex-wrap">
-                      <div className="flex-1 min-w-[280px] bg-white rounded-xl shadow p-4 md:p-6 flex flex-col gap-2">
+                    <div className="flex gap-3 md:gap-6 flex-wrap">
+                      <div className="flex-1 min-w-[260px] bg-white rounded-xl shadow p-3 md:p-6 flex flex-col gap-2">
                         <h2 className="text-lg md:text-xl font-semibold">{summary.carwashName}</h2>
                         <div className="flex items-center gap-4">
                           <span className="text-gray-500 truncate">Track bookings and manage CRM here...</span>
@@ -392,7 +426,7 @@ export default function EarningDashboard() {
                           </div>
                         </div>
                       </div>
-                      <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-xl shadow flex items-center justify-center overflow-hidden">
+                      <div className="w-20 h-20 md:w-32 md:h-32 bg-white rounded-xl shadow flex items-center justify-center overflow-hidden">
                         <img
                           src={carwash.logo || "/default-logo.png"}
                           alt="Carwash Logo"
@@ -403,27 +437,27 @@ export default function EarningDashboard() {
                     </div>
 
                     {/* Best/Lowest + KPIs */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
                       {/* 1. Best Month */}
-                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                      <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[92px]">
                         <span className="text-green-600 font-semibold whitespace-nowrap">Best Month</span>
                         <span className="text-base md:text-lg leading-tight">{summary.bestMonth?.name}</span>
                         <span className="text-xs text-gray-500 leading-none">Net Profit: {fmtPHP(summary.bestMonth?.profit || 0)}</span>
                       </div>
                       {/* 2. Lowest Month */}
-                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                      <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[92px]">
                         <span className="text-red-600 font-semibold whitespace-nowrap">Lowest Month</span>
                         <span className="text-base md:text-lg leading-tight">{summary.lowestMonth?.name}</span>
                         <span className="text-xs text-gray-500 leading-none">Net Profit: {fmtPHP(summary.lowestMonth?.profit || 0)}</span>
                       </div>
                       {/* 3. Total Income */}
-                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                      <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[92px]">
                         <span className="text-blue-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Total Income</span>
                         <span className="text-base md:text-lg leading-none">{fmtPHP(apiSummary.total_paid)}</span>
                         <span className="mt-1 text-[10px] md:text-xs text-green-600 leading-none">{summary.incomeChange}</span>
                       </div>
                       {/* 4. Refunds */}
-                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                      <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[92px]">
                         <span className="text-red-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Refunds</span>
                         <span className="text-base md:text-lg leading-none">
                           ₱{Number(totalRefundedAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
@@ -433,7 +467,7 @@ export default function EarningDashboard() {
                         </span>
                       </div>
                       {/* 5. Net Profit */}
-                      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center min-h-[96px]">
+                      <div className="bg-white rounded-xl shadow p-3 md:p-4 flex flex-col items-center justify-center min-h-[92px]">
                         <span className="text-green-600 font-semibold text-sm md:text-base leading-tight whitespace-nowrap">Net Profit</span>
                         <span className="text-base md:text-lg leading-none">{fmtPHP(apiSummary.total_amount)}</span>
                         <span className="mt-1 text-[10px] md:text-xs text-green-600 leading-none">{summary.profitChange}</span>
@@ -441,9 +475,9 @@ export default function EarningDashboard() {
                     </div>
 
                     {/* Net Income Trend */}
-                    <div className="bg-white rounded-xl shadow p-4 md:p-6">
+                    <div className="bg-white rounded-xl shadow p-3 md:p-6">
                       <h4 className="font-semibold mb-2">Net Income Trend (Last 6 Months)</h4>
-                      <div className="w-full h-36 md:h-44">
+                      <div className="w-full h-32 md:h-44">
                         <Bar
                           data={trendBarData}
                           options={{
@@ -467,7 +501,7 @@ export default function EarningDashboard() {
 
                   {/* Details + small charts */}
                   <section className="lg:col-span-1 space-y-4 md:space-y-6 min-w-0">
-                    <div className="bg-white rounded-xl shadow p-4 md:p-6">
+                    <div className="bg-white rounded-xl shadow p-3 md:p-6">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-semibold">Income & Refund Details</h4>
                         <button
@@ -549,10 +583,10 @@ export default function EarningDashboard() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 md:gap-4">
-                      <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex flex-col items-center">
+                    <div className="grid grid-cols-2 gap-2 md:gap-4">
+                      <div className="bg-white rounded-xl shadow p-3 md:p-4 border border-gray-100 flex flex-col items-center">
                         <h4 className="font-semibold mb-2">Income vs Refund</h4>
-                        <div className="w-full max-w-[120px] h-[110px]">
+                        <div className="w-full max-w-[110px] h-[100px]">
                           <Doughnut data={doughnutData} options={{ maintainAspectRatio: false }} />
                         </div>
                         <div className="mt-2 text-center text-xs">
@@ -561,9 +595,9 @@ export default function EarningDashboard() {
                           <span className="text-red-600 font-bold">Refund: {fmtPHP(totalRefundedAmount)}</span>
                         </div>
                       </div>
-                      <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex flex-col items-center">
+                      <div className="bg-white rounded-xl shadow p-3 md:p-4 border border-gray-100 flex flex-col items-center">
                         <h4 className="font-semibold mb-2">Payments by Status</h4>
-                        <div className="w-full max-w-[140px] h-[110px]">
+                        <div className="w-full max-w-[130px] h-[100px]">
                           <Bar
                             data={barData}
                             options={{
