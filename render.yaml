@@ -6,4 +6,3 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     autoDeploy: true
-    plan: free
