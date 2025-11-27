@@ -37,7 +37,7 @@ const path = require('path');
 // Middleware
 app.use(cors({
   origin: [
-    'https://your-frontend.onrender.com',
+    'https://wash-connect-frontend.onrender.com',
     'http://localhost:5173'
   ],
   credentials: true
