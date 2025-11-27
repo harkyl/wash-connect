@@ -1,16 +1,52 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path'); // add this
 require('dotenv').config();
 
+// Import routers
+const registerRoutes = require('./routes/user'); // adjust if register is a different file
+const loginRoutes = require('./routes/login');
+const testTokenRoutes = require('./routes/testToken');
+
+const carwashOwnerRegisterRoutes = require('./routes/carwashOwnerRegisters');
+const carwashOwnerLoginRoutes = require('./routes/carwashOwnerLogin');
+const carwashApplicationsRequestRoutes = require('./routes/carwashApplications');
+const bookingFormRoutes = require('./routes/bookingform');
+const personnelRoutes = require('./routes/personnel');
+const carwashOwnersRoutes = require('./routes/carwashOwners');
+const ownerAvatarUpload = require('./routes/ownerAvatarUpload');
+const userAvatarUpload = require('./routes/userAvatarUpload');
+const feedbackRoutes = require('./routes/feedback');
+const paymentRoutes = require('./routes/payment');
+const serviceRoutes = require('./routes/service');
+const bookingRoutes = require('./routes/booking');
+const refundRoutes = require('./routes/refund');
+const reviewsRoutes = require('./routes/reviews');
+const forgotPasswordRoutes = require('./routes/forgotpassword');
+const resetPasswordRoutes = require('./routes/resetpassword');
+const ownersRoutes = require('./routes/owners');
+const customersRoutes = require('./routes/customers');
+const userRoutes = require('./routes/user');
+
+const adminRegisterRoutes = require('./adminroutes/adminRegister');
+const adminApplicationRequestRoutes = require('./adminroutes/adminApplicationRequest');
+const adminUserManagementRoutes = require('./adminroutes/adminUserManagement');
+const adminApplicationManagementRoutes = require('./adminroutes/adminApplicationManagement');
+
+const profileRoutes = require('./routes/profile');
+const changePasswordRoutes = require('./routes/changePasswords');
+
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors({ origin: ['http://localhost:5173', 'https://your-frontend.onrender.com'], credentials: true }));
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ['http://localhost:5173', 'https://wash-connect-frontend.onrender.com'].includes(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(express.json());
-
-// Health check
-app.get('/api/health', (_, res) => res.json({ ok: true }));
 
 // user and owner routes
 app.use('/api/auth', registerRoutes);
@@ -62,4 +98,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
