@@ -35,7 +35,13 @@ const app = express();
 const path = require('path');
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://your-frontend.onrender.com',
+    'http://localhost:5173'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // user and owner routes
@@ -76,8 +82,7 @@ app.use('/api/user', changePasswordRoutes);
 //uploading for png
 app.use('/uploads/logos', express.static(path.join(__dirname, 'uploads/logos')));
 app.use('/uploads/avatars', express.static(path.join(__dirname, 'uploads/avatars')));
-
-
+app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
@@ -90,4 +95,6 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
