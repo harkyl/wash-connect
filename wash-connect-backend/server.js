@@ -41,7 +41,7 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || ['http://localhost:5173', 'https://wash-connect-frontend.onrender.com'].includes(origin)) return cb(null, true);
+    if (!origin || ['http://localhost:5173', 'https://wash-connect-gmim.vercel.app'].includes(origin)) return cb(null, true);
     return cb(new Error('Not allowed by CORS'));
   },
   credentials: true
