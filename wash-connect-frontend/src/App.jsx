@@ -29,14 +29,14 @@ import AwaitingApproval from './carwashowners/AwaitingApproval';
 import BookingHistory from './carwashowners/bookinghistory';
 import EarningDashboard from './carwashowners/EarningDashboard';
 import BookingStatus from './customers/bookingStatus';
-import PersonnelDetails from './carwashowners/PersonnelDetails';
+import PersonnelDetails from './carwashowners/personnelDetails';
 import StatusUpdate from './carwashowners/statusUpdate';
 import TrackStatus from './customers/trackStatus';
 import RescheduleForm from './customers/RescheduleForm';
 import Feedback from './customers/feedback';
 import RefundRequest from './carwashowners/refundRequest';
-import ShopBanned from './carwashowners/shopbanned'; // <-- Fix import name
-import ForgotPassword from './forgotPassword'; // <-- Fix import path
+import ShopBanned from './carwashowners/shopbanned'; 
+import ForgotPassword from './forgotPassword'; 
 import PasswordReset from './passwordReset';
 
 function App() {
