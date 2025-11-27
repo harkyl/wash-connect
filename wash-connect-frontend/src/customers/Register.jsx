@@ -83,14 +83,14 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col md:flex-row">
       <Toaster position="top-center" />
-      <div className="flex-1 bg-gradient-to-br from-sky-200 to-sky-300 relative overflow-hidden">
+      <div className="md:flex-1 h-48 md:h-auto bg-gradient-to-br from-sky-200 to-sky-300 relative overflow-hidden">
         <button 
-            className="absolute top-6 left-6 p-2 hover:bg-black/10 rounded-full transition-colors z-10"
+            className="absolute top-4 left-4 p-2 hover:bg-black/10 rounded-full transition-colors z-10"
             onClick={() => navigate('/')}
         >
-          <ArrowLeft className="w-6 h-6 text-black" />
+          <ArrowLeft className="w-5 h-5 md:w-6 md:h-6 text-black" />
         </button>
         {/* Full-bleed image */}
         <div className="absolute inset-0">
@@ -102,17 +102,17 @@ function Register() {
         </div>
       </div>
 
-      <div className="flex-1 bg-white flex items-center justify-center p-8">
+      <div className="md:flex-1 bg-white flex items-center justify-center p-4 md:p-8">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl mb-2" style={{ fontFamily: "Brush Script MT, cursive" }}>
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-3xl md:text-4xl mb-2" style={{ fontFamily: "Brush Script MT, cursive" }}>
               <span className="text-cyan-500">Wash</span> <span className="text-gray-800">Connect</span>
             </h1>
-            <p className="text-cyan-500 text-lg font-medium">Create a new account</p>
+            <p className="text-cyan-500 text-base md:text-lg font-medium">Create a new account</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <input
                 type="text"
                 name="firstName"
@@ -132,7 +132,7 @@ function Register() {
             </div>
 
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
               <input
                 type="email"
                 name="email"
@@ -144,7 +144,7 @@ function Register() {
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
@@ -156,14 +156,14 @@ function Register() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white z-10"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white z-10"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
@@ -175,14 +175,14 @@ function Register() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white z-10"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white z-10"
               >
                 {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
 
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
               <input
                 type="tel"
                 name="phone"
@@ -194,7 +194,7 @@ function Register() {
             </div>
 
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
               <input
                 type="text"
                 name="location"
@@ -205,7 +205,7 @@ function Register() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <select
                 name="gender"
                 value={formData.gender}
