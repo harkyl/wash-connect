@@ -2,6 +2,7 @@ services:
   - type: web
     name: wash-connect-backend
     env: node
+    rootDir: wash-connect-backend
     buildCommand: npm install
     startCommand: node server.js
     autoDeploy: true
@@ -9,8 +10,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: JWT_SECRET
         sync: false
       - key: DATABASE_URL
