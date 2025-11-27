@@ -2,47 +2,15 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const registerRoutes = require('./routes/user');
-const loginRoutes = require('./routes/login');
-const testTokenRoutes = require('./routes/testToken');
-const profileRoutes = require('./routes/profile');
-const changePasswordRoutes = require('./routes/changePasswords');
-const carwashOwnerRegisterRoutes = require('./routes/carwashOwnerRegisters');
-const carwashOwnerLoginRoutes = require('./routes/carwashOwnerLogin');
-const adminRegisterRoutes = require('./adminroutes/adminRegister');
-const adminApplicationRequestRoutes = require('./adminroutes/adminApplicationRequest');
-const adminUserManagementRoutes = require('./adminroutes/adminUserManagement');
-const adminApplicationManagementRoutes = require('./adminroutes/adminApplicationManagement');
-const carwashApplicationsRequestRoutes = require('./routes/carwashApplications');
-const bookingFormRoutes = require('./routes/bookingform');
-const personnelRoutes = require('./routes/personnel');
-const carwashOwnersRoutes = require('./routes/carwashOwners');
-const ownerAvatarUpload = require('./routes/ownerAvatarUpload');
-const userAvatarUpload = require('./routes/userAvatarUpload');
-const feedbackRoutes = require('./routes/feedback');
-const paymentRoutes = require('./routes/payment');
-const serviceRoutes = require('./routes/service');
-const bookingRoutes = require('./routes/booking');
-const refundRoutes = require('./routes/refund'); // Add this line
-const reviewsRoutes = require('./routes/reviews'); // Add this line
-const forgotPasswordRoutes = require('./routes/forgotpassword'); // Add this line
-const resetPasswordRoutes = require('./routes/resetpassword'); // Add this line
-const ownersRoutes = require('./routes/owners'); // Add this line
-const customersRoutes = require('./routes/customers');
-const userRoutes = require('./routes/user');
-
 const app = express();
-const path = require('path');
+const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors({
-  origin: [
-    'https://wash-connect-frontend.onrender.com',
-    'http://localhost:5173'
-  ],
-  credentials: true
-}));
+app.use(cors({ origin: ['http://localhost:5173', 'https://your-frontend.onrender.com'], credentials: true }));
 app.use(express.json());
+
+// Health check
+app.get('/api/health', (_, res) => res.json({ ok: true }));
 
 // user and owner routes
 app.use('/api/auth', registerRoutes);
@@ -94,7 +62,4 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
