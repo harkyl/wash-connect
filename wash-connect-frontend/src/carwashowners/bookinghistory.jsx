@@ -8,6 +8,9 @@ export default function BookingHistory() {
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
 
+  // NEW: owner display name
+  const [ownerName, setOwnerName] = useState('Owner');
+
   // Cache of customer_email -> avatar URL
   const [avatarMap, setAvatarMap] = useState({});
 
@@ -18,6 +21,18 @@ export default function BookingHistory() {
     const fetchData = async () => {
       const token = localStorage.getItem("token");
       const owner = JSON.parse(localStorage.getItem("carwashOwner"));
+
+      // NEW: derive display name if owner exists
+      if (owner) {
+        const name =
+          owner.name ||
+          [owner.first_name, owner.last_name].filter(Boolean).join(' ') ||
+          owner.fullName ||
+          owner.email ||
+          'Owner';
+        setOwnerName(name);
+      }
+
       if (!owner || !owner.id || !token) {
         navigate("/carwash-login");
         return;
@@ -189,7 +204,7 @@ export default function BookingHistory() {
             <h1 className="text-2xl font-semibold">Booking History</h1>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-500">Owner</span>
+            <span className="text-gray-700 font-medium">{ownerName}</span>
             <FaUserCircle className="text-2xl text-gray-400" />
           </div>
         </header>
@@ -308,24 +323,4 @@ export default function BookingHistory() {
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                   <button
                     key={n}
-                    className={`px-3 py-1 rounded border text-sm ${n === currentPage ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-700 hover:bg-gray-100"}`}
-                    onClick={() => setCurrentPage(n)}
-                  >
-                    {n}
-                  </button>
-                ))}
-                <button
-                  className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </section>
-        </div>
-      </main>
-    </div>
-  );
-}
+       
