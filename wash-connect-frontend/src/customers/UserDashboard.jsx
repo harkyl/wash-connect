@@ -38,6 +38,9 @@ const formatDateOnly = (raw) => {
   return s.includes("T") ? s.split("T")[0] : s;
 };
 
+const ACTIVE_STATUSES = ["Pending","Confirmed","On Going","Halfway"];
+const isActiveStatus = (s) => ACTIVE_STATUSES.includes(String(s || "").trim());
+
 function UserDashboard() {
   const navigate = useNavigate()
   const [userInfo, setUserInfo] = useState({
@@ -51,6 +54,7 @@ function UserDashboard() {
   })
   const [profilePic, setProfilePic] = useState(null)
   const [bookings, setBookings] = useState([])
+  const [cancelling, setCancelling] = useState({}) // bookingId:boolean
 
   // NEW: edit state for Personal Information
   const [isEditing, setIsEditing] = useState(false);
@@ -269,6 +273,55 @@ function UserDashboard() {
       setSaving(false);
     }
   };
+
+  const cancelBooking = async (appointmentId) => {
+    if (!appointmentId || cancelling[appointmentId]) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    // Find original status
+    setCancelling((m) => ({ ...m, [appointmentId]: true }));
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.appointment_id === appointmentId
+          ? { ...b, originalStatus: b.status, status: "Cancelled" }
+          : b
+      )
+    );
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/bookings/cancel/${appointmentId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) {
+        // Revert status on failure
+        setBookings((prev) =>
+          prev.map((b) =>
+            b.appointment_id === appointmentId
+              ? { ...b, status: b.originalStatus || "Pending" }
+              : b
+          )
+        );
+      }
+    } catch {
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.appointment_id === appointmentId
+            ? { ...b, status: b.originalStatus || "Pending" }
+            : b
+        )
+      );
+    } finally {
+      setCancelling((m) => ({ ...m, [appointmentId]: false }));
+      // Optional: remove cancelled booking from list
+      // setBookings((prev) => prev.filter(b => b.appointment_id !== appointmentId));
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-cyan-50 to-blue-100">
       {/* Sidebar */}
@@ -309,9 +362,7 @@ function UserDashboard() {
           <div
             className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-black cursor-pointer"
             onClick={() => {
-              const activeBooking = bookings.find(
-                (b) => !["Declined", "Cancelled", "Completed"].includes(b.status)
-              );
+              const activeBooking = bookings.find(b => isActiveStatus(b.status));
               if (activeBooking) {
                 navigate("/booking-confirmation", { state: { appointment_id: activeBooking.appointment_id } });
               } else {
@@ -334,19 +385,15 @@ function UserDashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="flex items-center justify-between px-8 py-6 bg-[#a8d6ea] border-b border-gray-200 shadow-sm">
-          <div className="flex items-center">
-            <span className="text-2xl font-bold">My Account</span>
-          </div>
-          <div className="flex items-center gap-4 relative">
-            {/* Profile icon with name */}
+        <header className="flex items-center justify-between px-8 py-4 bg-gradient-to-r from-[#7cc3e2] to-[#a8d6ea] border-b border-gray-200">
+          <h1 className="text-xl font-semibold text-white">My Account</h1>
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-white rounded-full px-3 py-1 border border-cyan-200">
               <FaUser className="w-5 h-5 text-blue-400" />
               <span className="text-sm font-medium text-gray-700">
                 {userInfo.firstName} {userInfo.lastName}
               </span>
             </div>
-            {/* Three dots menu */}
             <HeaderMenuDropdown navigate={navigate} />
           </div>
         </header>
@@ -461,7 +508,7 @@ function UserDashboard() {
                             <span className={`px-3 py-1 rounded-full text-xs font-bold shadow ${
                               booking.status === "Pending"
                                 ? "bg-yellow-100 text-yellow-700"
-                                : booking.status === "Approved"
+                                : booking.status === "Approved" || booking.status === "Confirmed"
                                 ? "bg-green-100 text-green-700"
                                 : booking.status === "Cancelled"
                                 ? "bg-red-100 text-red-700"
@@ -479,6 +526,17 @@ function UserDashboard() {
                               {formatDateOnly(booking.date || booking.schedule_date)}
                             </span>
                           </div>
+                          {booking.status !== "Cancelled" && booking.status !== "Declined" && booking.status !== "Completed" && (
+                            <div className="mt-4 flex justify-end">
+                              <button
+                                className="text-xs px-3 py-2 rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                                disabled={cancelling[booking.appointment_id]}
+                                onClick={() => cancelBooking(booking.appointment_id)}
+                              >
+                                {cancelling[booking.appointment_id] ? "Cancelling..." : "Cancel Booking"}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))

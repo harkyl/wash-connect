@@ -16,6 +16,7 @@ export default function EarningDashboard() {
   const [services, setServices] = useState([]);
   const [refunds, setRefunds] = useState([]);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [ownerName, setOwnerName] = useState("Owner"); // NEW
 
   // Load owner -> application -> payments
   useEffect(() => {
@@ -26,6 +27,28 @@ export default function EarningDashboard() {
         if (!owner?.id || !token) {
           navigate("/carwash-login");
           return;
+        }
+
+        // Prime owner name from localStorage (fallback)
+        const initialName = `${owner.owner_first_name || owner.first_name || ""} ${owner.owner_last_name || owner.last_name || ""}`.trim() || "Owner";
+        setOwnerName(initialName);
+
+        // Fetch latest owner details
+        try {
+          const ownerRes = await fetch(`http://localhost:3000/api/carwash-owners/${owner.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (ownerRes.status === 401) {
+            navigate("/carwash-login");
+            return;
+          }
+            if (ownerRes.ok) {
+              const od = await ownerRes.json();
+              const freshName = `${od.first_name || od.owner_first_name || ""} ${od.last_name || od.owner_last_name || ""}`.trim() || "Owner";
+              setOwnerName(freshName);
+            }
+        } catch {
+          // ignore and keep initial name
         }
 
         // Get this owner's carwash application
@@ -44,7 +67,7 @@ export default function EarningDashboard() {
           : "/default-logo.png";
 
         setCarwash({
-          carwashName: appData?.carwash_name || appData?.carwashName || "Carwash",
+          carwashName: appData?.carwashName || "Carwash",
           logo: logoUrl,
           applicationId,
         });
@@ -395,8 +418,8 @@ export default function EarningDashboard() {
             </nav>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-500 hidden sm:inline">Owner</span>
             <FaUserCircle className="text-2xl text-gray-400" />
+            <span className="text-gray-700 font-medium truncate">{ownerName}</span>
           </div>
         </header>
 
@@ -412,7 +435,6 @@ export default function EarningDashboard() {
                       <div className="flex-1 min-w-[260px] bg-white rounded-xl shadow p-3 md:p-6 flex flex-col gap-2">
                         <h2 className="text-lg md:text-xl font-semibold">{summary.carwashName}</h2>
                         <div className="flex items-center gap-4">
-                          <span className="text-gray-500 truncate">Track bookings and manage CRM here...</span>
                           <span className="ml-auto text-xs md:text-sm text-gray-400 whitespace-nowrap">Date: {summary.month}</span>
                         </div>
                         <div className="flex items-center gap-6 md:gap-8 mt-3">

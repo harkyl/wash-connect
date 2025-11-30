@@ -57,7 +57,12 @@ export default function CarwashDashboard() {
                     return;
                 }
                 const appData = await appRes.json();
-                setCarwashData(appData);
+                setCarwashData({
+                  ...appData,
+                  logo: appData.logo
+                    ? `http://localhost:3000/uploads/logos/${appData.logo}`
+                    : "/default-logo.png",
+                });
 
                 // Fetch bookings if application exists
                 if (appData && appData.applicationId) {
@@ -108,7 +113,31 @@ export default function CarwashDashboard() {
 		setTimeout(() => setToast({ show: false, message: "", type: "success" }), 3000);
 	};
 
-	const submitService = async (e) => {
+    const handleDeleteService = async (serviceId) => {
+        if (!window.confirm("Are you sure you want to delete this service? This action cannot be undone.")) {
+            return;
+        }
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`http://localhost:3000/api/services/${serviceId}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if (!res.ok) {
+                const msg = await res.text();
+                showToast(`Error: ${msg || "Failed to delete service"}`, "error");
+                return;
+            }
+            setServices((prev) => prev.filter((s) => s.serviceId !== serviceId));
+            showToast("Service deleted successfully.", "success");
+        } catch {
+            showToast("Network error. Could not delete service.", "error");
+        }
+    };
+
+    const submitService = async (e) => {
 		e.preventDefault();
 		if (!carwashData?.applicationId) {
 			showToast("Missing applicationId", "error");
@@ -358,24 +387,67 @@ export default function CarwashDashboard() {
 								</h2>
 								<p className="text-gray-500">Carwash owner</p>
 							</div>
-							<div className="ml-auto flex flex-col items-center">
-            <div className="w-24 h-24 bg-white rounded-lg shadow flex items-center justify-center mb-2">
-              <img
-                src={
-                  carwashData?.logo
-                    ? `http://localhost:3000/uploads/logos/${carwashData.logo}`
-                    : "/default-logo.png"
-                }
-                alt="Company Logo"
-                className="w-20 h-20 object-contain"
-                onError={e => { e.target.onerror = null; e.target.src = "/default-logo.png"; }}
-              />
-            </div>
-            <div className="text-center text-base mt-1 font-semibold">
-              {carwashData?.carwash_name || carwashData?.carwashName || "Carwash Company"}
-            </div>
-            {/* Optionally, add stars or rating here */}
-          </div>
+                            <div className="ml-auto flex flex-col items-center">
+                <div className="relative w-24 h-24 bg-white rounded-lg shadow flex items-center justify-center mb-2">
+                  <img
+                    src={carwashData?.logo || "/default-logo.png"}
+                    alt="Company Logo"
+                    className="w-20 h-20 object-contain"
+                    onError={e => { e.target.onerror = null; e.target.src = "/default-logo.png"; }}
+                  />
+                  <label className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file || !carwashData?.applicationId) return;
+
+                        try {
+                          const token = localStorage.getItem("token");
+                          const formData = new FormData();
+                          formData.append("logo", file);
+
+                          const res = await fetch(
+                            `http://localhost:3000/api/carwash-applications/${carwashData.applicationId}/logo`,
+                            {
+                              method: "POST",
+                              headers: { Authorization: `Bearer ${token}` },
+                              body: formData,
+                            }
+                          );
+
+                          if (!res.ok) {
+                            const errorData = await res.json();
+                            showToast(`Upload failed: ${errorData.error || "Server error"}`, "error");
+                            return;
+                          }
+
+                          const updated = await res.json();
+                          setCarwashData((prev) => ({
+                            ...prev,
+                            logo: updated.logo.startsWith('http')
+                              ? updated.logo
+                              : `http://localhost:3000/uploads/logos/${updated.logo}`,
+                          }));
+                          showToast("Logo updated successfully!", "success");
+                        } catch {
+                          showToast("Error uploading logo.", "error");
+                        }
+                      }}
+                    />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" />
+                      <circle cx="12" cy="13" r="3.5" />
+                    </svg>
+                  </label>
+                </div>
+                <div className="text-center text-base mt-1 font-semibold">
+                  {carwashData?.carwash_name || carwashData?.carwashName || "Carwash Company"}
+                </div>
+                {/* Optionally, add stars or rating here */}
+              </div>
 						</div>
 
 						{/* Services */}
@@ -397,7 +469,7 @@ export default function CarwashDashboard() {
                   services.map(s => {
                     const img = s.image_url
                       ? (String(s.image_url).startsWith('http') ? s.image_url : `http://localhost:3000${s.image_url}`)
-                      : "https://via.placeholder.com/64?text=Svc";
+                      : "https://placehold.co/64x64/EFEFEF/AAAAAA?text=Svc";
                     return (
                       <div key={s.serviceId} className="flex items-center justify-between border rounded p-2">
                         <div className="flex items-center gap-3">
@@ -405,19 +477,27 @@ export default function CarwashDashboard() {
                             src={img}
                             alt=""
                             className="w-12 h-12 object-cover rounded"
-                            onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/64?text=Svc"; }}
+                            onError={(e) => { e.currentTarget.src = "https://placehold.co/64x64/EFEFEF/AAAAAA?text=Svc"; }}
                           />
                           <div>
                             <div className="font-medium">{s.name}</div>
                             <div className="text-sm text-gray-600">₱{Number(s.price).toFixed(2)}</div>
                           </div>
                         </div>
-                        <button
-                          className="text-blue-600 text-sm"
-                          onClick={() => setEditSvc(s)} // Open edit modal with selected service
-                        >
-                          Edit
-                        </button>
+                        <div className="flex items-center gap-4">
+                          <button
+                            className="text-blue-600 text-sm font-medium hover:underline"
+                            onClick={() => setEditSvc(s)} // Open edit modal with selected service
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="text-red-600 text-sm font-medium hover:underline"
+                            onClick={() => handleDeleteService(s.serviceId)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     );
                   })

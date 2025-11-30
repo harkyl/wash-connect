@@ -4,7 +4,7 @@ import {
   FaMapMarkerAlt,
   FaEnvelope,
   FaSearch,
-  FaRegUser,
+  FaRegEye,
   FaRegCheckSquare,
   FaRegFolderOpen,
   FaTrophy,
@@ -100,9 +100,9 @@ function PersonnelList() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
       {/* Sidebar (desktop) */}
-      <aside className="hidden md:flex w-64 bg-white border-r flex-col h-screen sticky top-0">
+      <aside className="hidden md:flex w-64 bg-white border-r flex-col">
         <div className="px-6 py-8">
           <div className="text-3xl flex items-center select-none">
             <span className="text-gray-700" style={{ fontFamily: '"Great Vibes", cursive', fontSize: "2.2rem" }}>
@@ -115,7 +115,7 @@ function PersonnelList() {
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <button className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100" onClick={() => navigate("/carwash-dashboard")}>
-            <FaRegUser /> Overview
+            <FaRegEye /> Overview
           </button>
           <button className="w-full flex items-center gap-2 px-3 py-2 rounded bg-blue-100 text-blue-700 font-semibold" onClick={() => navigate("/personnel-list")}>
             <span className="text-lg">★</span> Customers & Employee
@@ -159,7 +159,7 @@ function PersonnelList() {
           </div>
           <nav className="p-3 space-y-2">
             <button className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setSidebarOpen(false); navigate("/carwash-dashboard"); }}>
-              <FaRegUser /> Overview
+              <FaRegEye /> Overview
             </button>
             <button className="w-full flex items-center gap-2 px-3 py-2 rounded bg-blue-100 text-blue-700 font-semibold" onClick={() => setSidebarOpen(false)}>
               <span className="text-lg">★</span> Customers & Employee

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaUserCircle, FaMapMarkerAlt, FaEnvelope, FaSearch, FaUsers, FaUser, FaCalendarAlt, FaSignOutAlt, FaRegEnvelope, FaRegUser, FaRegCheckSquare, FaRegFolderOpen, FaTrophy, FaBars } from "react-icons/fa";
+import { FaUserCircle, FaMapMarkerAlt, FaEnvelope, FaSearch, FaUsers, FaUser, FaCalendarAlt, FaSignOutAlt, FaRegEnvelope, FaRegEye, FaRegCheckSquare, FaRegFolderOpen, FaTrophy, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 // NEW: helpers to normalize avatars and enrich list with fetched avatars
@@ -68,7 +68,6 @@ async function enrichAvatars(customers, token) {
   return result;
 };
 
-// ...existing code...
 const statusColors = {
   "New Customer": "border-blue-400 text-blue-600",
   "Repeat Customer": "border-green-400 text-green-600",
@@ -264,9 +263,9 @@ function CustomerList() {
   const totalRepeatCustomers = customers.filter(c => c.status === "Repeat Customer").length;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r flex flex-col">
+      <aside className="hidden md:flex w-64 bg-white border-r flex-col">
         {/* Logo */}
         <div className="px-6 py-8">
           <div className="text-3xl flex items-center select-none">
@@ -290,7 +289,7 @@ function CustomerList() {
             className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 cursor-pointer transition-colors duration-200"
             onClick={() => navigate("/carwash-dashboard")}
           >
-            <FaRegUser /> Overview
+            <FaRegEye /> Overview
           </button>
           <button
             className="w-full flex items-center gap-2 px-3 py-2 rounded bg-blue-100 text-blue-700 font-semibold"
@@ -333,10 +332,18 @@ function CustomerList() {
           </button>
         </div>
       </aside>
+      {/* Mobile bar */}
+      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b">
+        <span className="font-semibold">Customers</span>
+        <button
+          className="text-sm px-3 py-1 rounded bg-blue-600 text-white"
+          onClick={() => navigate("/carwash-dashboard")}
+        >Dashboard</button>
+      </div>
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-8 py-4 bg-blue-100 border-b">
+        <div className="flex items-center justify-between px-4 sm:px-8 py-4 bg-blue-100 border-b flex-col sm:flex-row gap-2">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-semibold">Customers & Employee</h1>
           </div>
@@ -350,7 +357,7 @@ function CustomerList() {
           </div>
         </div>
         {/* Tabs and Stats */}
-        <div className="bg-white px-8 pt-6 pb-2 border-b flex flex-col gap-4">
+        <div className="bg-white px-4 sm:px-8 pt-4 sm:pt-6 pb-2 border-b flex flex-col gap-4">
           <div className="flex gap-8 items-end">
             <div className="flex gap-4">
               <button className="border-b-2 border-blue-400 text-blue-600 font-semibold pb-1 px-2">Customer</button>
@@ -400,7 +407,7 @@ function CustomerList() {
           </div>
         </div>
         {/* Search and Sort */}
-        <div className="flex items-center justify-between px-8 py-4 bg-white border-b">
+        <div className="flex items-center justify-between px-4 sm:px-8 py-3 bg-white border-b flex-col sm:flex-row gap-3">
           <div className="flex items-center gap-2">
             <FaSearch className="text-gray-400" />
             <input
@@ -423,9 +430,8 @@ function CustomerList() {
           </div>
         </div>
         {/* Customer Cards */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 bg-gray-50">
-          <h2 className="text-lg font-semibold mb-4">All Customer</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 bg-gray-50">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filtered.map((c, i) => (
               <div
                 key={i}

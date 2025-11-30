@@ -103,3 +103,27 @@ exports.getApprovedWithAppointments = async (req, res) => {
 		res.status(500).json({ error: 'Failed to fetch data', details: error.message });
 	}
 };
+
+exports.updateLogo = async (req, res) => {
+    const { applicationId } = req.params;
+    const logo = req.file ? req.file.filename : null;
+
+    if (!logo) {
+        return res.status(400).json({ error: "No logo file uploaded." });
+    }
+
+    try {
+        const [result] = await pool.query(
+            "UPDATE carwash_applications SET logo = ? WHERE applicationId = ?",
+            [logo, applicationId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Application not found." });
+        }
+
+        res.json({ message: "Logo updated successfully", logo });
+    } catch (error) {
+        res.status(500).json({ error: "Database error while updating logo.", details: error.message });
+    }
+};

@@ -263,42 +263,39 @@ function BookingPage() {
 			{/* Main Content */}
 			<div className="flex-1 flex flex-col">
 				{/* Header */}
-				<header className="flex items-center px-8 py-6 bg-gradient-to-r from-[#7cc3e2] to-[#a8d6ea] border-b border-gray-200">
-					<span className="text-3xl font-semibold text-white">{carwashName}</span>
-					<div className="ml-auto flex items-center gap-6 text-white relative">
-									{/* Message label removed */}
-						{/* Profile icon with name */}
-						<div className="flex items-center gap-2 bg-white rounded-full px-3 py-1 border border-cyan-200">
-							<User className="w-5 h-5 text-blue-400" />
-							<span className="text-sm font-medium text-gray-700">
-								{userName || "User"}
-							</span>
-						</div>
-						{/* Three dots menu */}
-						<div className="relative">
-							<button
-								className="p-2 rounded-full hover:bg-gray-200"
-								onClick={() => setMenuOpen((v) => !v)}
-								aria-label="Open menu"
-							>
-								<MoreVertical className="w-6 h-6 text-gray-700" />
-							</button>
-							{menuOpen && (
-								<div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded shadow-lg z-20">
-									<button
-										className="w-full text-left px-4 py-2 hover:bg-cyan-50 text-cyan-700 font-medium"
-										onClick={() => {
-											setMenuOpen(false);
-											navigate("/feedback");
-										}}
-									>
-										Send Feedback
-									</button>
-								</div>
-							)}
-						</div>
-					</div>
-				</header>
+				<header className="flex items-center justify-between px-8 py-4 bg-gradient-to-r from-[#7cc3e2] to-[#a8d6ea] border-b border-gray-200">
+                    <h1 className="text-xl font-semibold text-white">{carwashName} Services</h1>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 bg-white rounded-full px-3 py-1 border border-cyan-200">
+                            <FaUser className="w-5 h-5 text-blue-400" />
+                            <span className="text-sm font-medium text-gray-700">
+                                {userName || "User"}
+                            </span>
+                        </div>
+                        <div className="relative">
+                            <button
+                                className="p-2 rounded-full hover:bg-gray-200"
+                                onClick={() => setMenuOpen((v) => !v)}
+                                aria-label="Open menu"
+                            >
+                                <MoreVertical className="w-6 h-6 text-gray-700" />
+                            </button>
+                            {menuOpen && (
+                                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded shadow-lg z-20">
+                                    <button
+                                        className="w-full text-left px-4 py-2 hover:bg-cyan-50 text-cyan-700 font-medium"
+                                        onClick={() => {
+                                            setMenuOpen(false);
+                                            navigate("/feedback");
+                                        }}
+                                    >
+                                        Send Feedback
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </header>
 
 				{/* Active appointment banner */}
 				{hasActiveBooking && (

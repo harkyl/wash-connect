@@ -10,3 +10,4 @@ yarn-error.log*
 wash-connect-frontend/build/
 wash-connect-frontend/.env
 wash-connect-backend/.env
+wash-connect-backend/uploads/services/svc_1764467986721.jpg

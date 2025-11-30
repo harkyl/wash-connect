@@ -31,5 +31,6 @@ router.get('/carwash-applications/by-application/:applicationId', carwashApplica
 router.get('/applications/:id', carwashApplicationController.getApplicationById);
 router.get('/carwash-applications/approved', carwashApplicationController.getApprovedApplications);
 router.get('/carwash-applications/approved-with-appointments', carwashApplicationController.getApprovedWithAppointments);
+router.post('/carwash-applications/:applicationId/logo', upload.single('logo'), carwashApplicationController.updateLogo);
 
 module.exports = router;

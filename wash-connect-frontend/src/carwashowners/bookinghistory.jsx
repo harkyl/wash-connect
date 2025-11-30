@@ -8,6 +8,9 @@ export default function BookingHistory() {
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
 
+  // Owner first + last name (same flow as CustomerList)
+  const [ownerName, setOwnerName] = useState("Owner");
+
   // Cache of customer_email -> avatar URL
   const [avatarMap, setAvatarMap] = useState({});
 
@@ -17,14 +20,33 @@ export default function BookingHistory() {
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("token");
-      const owner = JSON.parse(localStorage.getItem("carwashOwner"));
-      if (!owner || !owner.id || !token) {
+      const ownerLS = JSON.parse(localStorage.getItem("carwashOwner") || "{}");
+      if (!ownerLS?.id || !token) {
         navigate("/carwash-login");
         return;
       }
 
+      // Prime owner name from localStorage
+      const initialName = `${ownerLS.owner_first_name || ownerLS.first_name || ""} ${ownerLS.owner_last_name || ownerLS.last_name || ""}`.trim() || "Owner";
+      setOwnerName(initialName);
+
       try {
-        const appRes = await fetch(`http://localhost:3000/api/carwash-applications/by-owner/${owner.id}`, {
+        // Fresh owner fetch
+        const ownerRes = await fetch(`http://localhost:3000/api/carwash-owners/${ownerLS.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (ownerRes.status === 401) {
+          navigate("/carwash-login");
+          return;
+        }
+        if (ownerRes.ok) {
+          const od = await ownerRes.json();
+          const freshName = `${od.first_name || od.owner_first_name || ""} ${od.last_name || od.owner_last_name || ""}`.trim() || "Owner";
+          setOwnerName(freshName);
+        }
+
+        // Application -> bookings
+        const appRes = await fetch(`http://localhost:3000/api/carwash-applications/by-owner/${ownerLS.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (appRes.status === 401) {
@@ -33,7 +55,7 @@ export default function BookingHistory() {
         }
         const appData = await appRes.json();
 
-        if (appData && appData.applicationId) {
+        if (appData?.applicationId) {
           const bookingsRes = await fetch(`http://localhost:3000/api/bookings/by-application/${appData.applicationId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -47,8 +69,8 @@ export default function BookingHistory() {
             : [];
           setBookingHistory(rows);
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (e) {
+        console.error("Error fetching data:", e);
       } finally {
         setIsLoading(false);
       }
@@ -69,7 +91,7 @@ export default function BookingHistory() {
     };
   }, [bookingHistory, currentPage]);
 
-  // Fetch avatars for visible bookings (by customer email). Adjust endpoint if needed.
+  // Fetch avatars for visible bookings (by customer email)
   useEffect(() => {
     const token = localStorage.getItem("token");
     const toFetch = pageItems
@@ -93,7 +115,7 @@ export default function BookingHistory() {
             setAvatarMap((prev) => ({ ...prev, [email]: url }));
           }
         } catch {
-          // ignore and rely on fallback
+          // ignore
         }
       }
     })();
@@ -103,7 +125,7 @@ export default function BookingHistory() {
     };
   }, [pageItems, avatarMap]);
 
-  // Clamp current page when data changes
+  // Clamp current page
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) setCurrentPage(1);
   }, [totalPages, currentPage]);
@@ -113,9 +135,9 @@ export default function BookingHistory() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r flex flex-col">
+      <aside className="w-full md:w-64 bg-white border-r flex flex-col md:block hidden md:flex">
         <div className="px-6 py-8">
           <div className="text-3xl flex items-center select-none">
             <span className="text-gray-700" style={{ fontFamily: '"Great Vibes", cursive', fontSize: "2.2rem" }}>Wash</span>
@@ -158,7 +180,6 @@ export default function BookingHistory() {
             <FaTrophy className="text-lg" />
             <span>Earnings Dashboard</span>
           </div>
-          {/* Request Refund below Earnings Dashboard */}
           <div
             className="flex items-center gap-2 mt-2 px-2 py-1 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-200"
             onClick={() => navigate('/refund-request')}
@@ -182,21 +203,32 @@ export default function BookingHistory() {
         </div>
       </aside>
 
+      {/* Mobile top bar */}
+      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b">
+        <span className="font-semibold">Booking History</span>
+        <button
+          className="text-sm px-3 py-1 rounded bg-blue-600 text-white"
+          onClick={() => navigate("/carwash-dashboard")}
+        >
+          Dashboard
+        </button>
+      </div>
+
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        <header className="flex items-center justify-between px-8 py-4 bg-blue-100 border-b">
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-8 py-4 bg-blue-100 border-b gap-2">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-semibold">Booking History</h1>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-500">Owner</span>
             <FaUserCircle className="text-2xl text-gray-400" />
+            <span className="text-gray-700 font-medium">{ownerName}</span>
           </div>
         </header>
 
-        <div className="flex-1 min-h-0 grid grid-cols-3 gap-6 p-8">
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-8">
           {/* Booking History List */}
-          <section className="col-span-2 flex flex-col min-h-0">
+            <section className="lg:col-span-2 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Past Bookings</h3>
               {bookingHistory.length > 0 && (
@@ -206,7 +238,6 @@ export default function BookingHistory() {
               )}
             </div>
 
-            {/* Scrollable list */}
             <div className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-4">
               {bookingHistory.length === 0 && (
                 <div className="text-gray-500 text-center">No booking history found.</div>
@@ -240,7 +271,6 @@ export default function BookingHistory() {
                         <span className="text-xs text-gray-500">Customer</span>
                         <span className="ml-auto flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">{booking.status || "Completed"}</span>
                       </div>
-                      {/* Show booking creation date/time if available */}
                       <div className="flex items-center gap-2 text-xs text-gray-500">
                         <span>
                           Booked: {booking.created_at
@@ -252,7 +282,6 @@ export default function BookingHistory() {
                               new Date(booking.schedule_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      {/* Show scheduled date and time */}
                       <div className="flex items-center gap-2 text-xs text-gray-500">
                         <span>
                           Scheduled: {booking.schedule_date
@@ -295,7 +324,6 @@ export default function BookingHistory() {
               })}
             </div>
 
-            {/* Pagination (max 4 pages) */}
             {totalPages > 1 && (
               <div className="mt-6 flex items-center justify-center gap-2">
                 <button
