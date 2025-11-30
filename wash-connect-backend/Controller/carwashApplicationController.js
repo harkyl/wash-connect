@@ -11,8 +11,8 @@ exports.submitApplication = async (req, res) => {
 
 	try {
 		await pool.query(
-			'INSERT INTO carwash_applications (ownerId, carwashName, location, logo, requirements) VALUES (?, ?, ?, ?, ?)',
-			[ownerId, carwashName, location, logo, requirements]
+			'INSERT INTO carwash_applications (ownerId, carwashName, location, logo, requirements, status) VALUES (?, ?, ?, ?, ?, ?)',
+			[ownerId, carwashName, location, logo, requirements, 'Pending']
 		);
 		res.status(201).json({ message: 'Application submitted successfully' });
 	} catch (error) {
@@ -55,21 +55,21 @@ exports.getApplicationByOwner = async (req, res) => {
 };
 
 exports.getApplicationById = async (req, res) => {
-	const applicationId = req.params.applicationId || req.params.id; // FIX: read applicationId
-	if (!applicationId) return res.status(400).json({ error: 'Missing applicationId' });
-	try {
-		const [rows] = await pool.query(
-			`SELECT applicationId, ownerId, carwashName, logo, location, status, created_at, updated_at
-			 FROM carwash_applications
-			 WHERE applicationId = ?
-			 LIMIT 1`,
-			[applicationId]
-		);
-		if (!rows[0]) return res.status(404).json({ error: "Application not found" });
-		res.json(rows[0]);
-	} catch (e) {
-		res.status(500).json({ error: "Failed to load application", details: e.message });
-	}
+    const applicationId = req.params.applicationId || req.params.id; // FIX: read applicationId
+    if (!applicationId) return res.status(400).json({ error: 'Missing applicationId' });
+    try {
+        const [rows] = await pool.query(
+            `SELECT applicationId, ownerId, carwashName, logo, location, status, requirements, created_at, updated_at
+             FROM carwash_applications
+             WHERE applicationId = ?
+             LIMIT 1`,
+            [applicationId]
+        );
+        if (!rows[0]) return res.status(404).json({ error: "Application not found" });
+        res.json(rows[0]);
+    } catch (e) {
+        res.status(500).json({ error: "Failed to load application", details: e.message });
+    }
 };
 
 exports.getApprovedApplications = async (req, res) => {

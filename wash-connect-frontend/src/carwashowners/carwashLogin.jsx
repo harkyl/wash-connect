@@ -50,7 +50,11 @@ function CarwashLogin() {
       setLoading(false);
 
       // Check registration status
-      const statusRes = await fetch(`http://localhost:3000/api/carwash-applications/status/${ownerId}`);
+      const statusRes = await fetch(`http://localhost:3000/api/carwash-applications/status/${ownerId}`, {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      });
       const statusData = await statusRes.json();
       const status = (statusData.status || "").toLowerCase();
 
@@ -60,14 +64,22 @@ function CarwashLogin() {
         return;
       }
 
+      // Handle declined status
+      if (status === "declined") {
+        setError("Your application has been declined. Please contact support for more information.");
+        setLoading(false);
+        return;
+      }
+
       if (status === "approved") {
         navigate("/carwash-dashboard");
       } else if (status === "pending") {
         navigate("/awaiting-approval");
       } else {
+        // For new users or other unhandled statuses
         navigate("/carwash-application-registration");
       }
-    } catch  {
+    } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
     }
