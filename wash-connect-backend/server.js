@@ -27,6 +27,7 @@ const resetPasswordRoutes = require('./routes/resetpassword');
 const ownersRoutes = require('./routes/owners');
 const customersRoutes = require('./routes/customers');
 const userRoutes = require('./routes/user');
+const reportRoutes = require('./routes/reports');
 
 const adminRegisterRoutes = require('./adminroutes/adminRegister');
 const adminApplicationRequestRoutes = require('./adminroutes/adminApplicationRequest');
@@ -74,6 +75,7 @@ app.use('/api/reset-password', resetPasswordRoutes); // Add this line
 app.use('/api', ownersRoutes); // Add this line
 app.use('/api/customers', customersRoutes); // Add this line
 app.use('/api/users', userRoutes);
+app.use('/api/reports', reportRoutes);
 
 //admin
 app.use('/api/admin', adminRegisterRoutes);

@@ -14,7 +14,9 @@ function ReportModal({ isOpen, onClose, onSubmit, shop }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(reason);
+    if (reason.trim()) {
+      onSubmit(reason);
+    }
   };
 
   return (

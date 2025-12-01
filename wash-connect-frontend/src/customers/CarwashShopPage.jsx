@@ -180,41 +180,50 @@ function CarwashShopPage() {
     setReportingShop(null);
   };
 
-  const handleSubmitReport = async (reason) => {
+  const handleSubmitReport = (reason) => {
     if (!reportingShop) return;
 
     const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !user.user_id) {
+    if (!user || !user.id) {
       toast.error("Could not find user information. Please log in again.");
       return;
     }
 
-    try {
-      const response = await fetch("http://localhost:3000/api/reports", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          shopId: reportingShop.applicationId,
-          reason: reason,
-          reporterId: user.user_id, // Manually send the user's ID
-        }),
-      });
-
+    const reportPromise = fetch("http://localhost:3000/api/reports", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        applicationId: reportingShop.applicationId,
+        reason: reason,
+        user_id: user.id,
+      }),
+    }).then(async (response) => {
+      // Always try to parse the JSON response body.
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to submit report.");
+      if (response.ok) {
+        // If the response is OK, resolve the promise with the success message from the backend.
+        return data.message || "Report submitted successfully!";
+      } else {
+        // If the response is not OK, reject the promise with the error message.
+        return Promise.reject(data.message || "Failed to submit report.");
       }
+    });
 
-      toast.success(`Report for "${reportingShop.carwashName}" has been submitted.`);
-    } catch (error) {
-      console.error("Error submitting report:", error);
-      toast.error(error.message || "An error occurred while submitting the report.");
-    } finally {
-      handleCloseReportModal();
-    }
+    toast.promise(reportPromise, {
+      loading: "Submitting report...",
+      success: (message) => {
+        handleCloseReportModal(); // Close modal on success
+        return message;
+      },
+      error: (err) => {
+        // Display the error message from the rejected promise
+        console.error("Report submission failed:", err);
+        return err.toString();
+      },
+    });
   };
 
   const handleViewServices = (shop) => {
