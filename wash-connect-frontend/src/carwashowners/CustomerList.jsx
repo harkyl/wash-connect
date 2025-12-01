@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { FaUserCircle, FaMapMarkerAlt, FaEnvelope, FaSearch, FaUsers, FaUser, FaCalendarAlt, FaSignOutAlt, FaRegEnvelope, FaRegEye, FaRegCheckSquare, FaRegFolderOpen, FaTrophy, FaBars } from "react-icons/fa";
+import { FaUserCircle, FaMapMarkerAlt, FaEnvelope, FaSearch, FaUsers, FaUser, FaCalendarAlt, FaSignOutAlt, FaRegEnvelope, FaRegEye, FaRegCheckSquare, FaRegFolderOpen, FaTrophy, FaBars, FaEllipsisV, FaFlag } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import ReportCustomerModal from "./components/ReportCustomerModal"; // Import the new modal component
+import toast, { Toaster } from 'react-hot-toast';
 
 // NEW: helpers to normalize avatars and enrich list with fetched avatars
 const normalizeAvatarUrl = (url) => {
@@ -148,6 +150,10 @@ function CustomerList() {
   const [statusFilter, setStatusFilter] = useState("all"); // all | new | repeat
   // NEW: owner name for header
   const [ownerName, setOwnerName] = useState("Owner");
+  // State for the report modal
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [customerToReport, setCustomerToReport] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -257,6 +263,53 @@ function CustomerList() {
     localStorage.removeItem("carwashOwner");
     localStorage.removeItem("token");
     navigate("/carwash-login");
+  };
+
+  const openReportModal = (customer) => {
+    setCustomerToReport(customer);
+    setIsReportModalOpen(true);
+  };
+
+  const closeReportModal = () => {
+    setIsReportModalOpen(false);
+    setCustomerToReport(null);
+    setIsSubmitting(false);
+  };
+
+  const handleReportSubmit = async (reason) => {
+    if (!customerToReport) return;
+
+    setIsSubmitting(true);
+    const token = localStorage.getItem("token");
+    const owner = JSON.parse(localStorage.getItem("carwashOwner"));
+
+    try {
+      const response = await fetch('http://localhost:3000/api/reports/customer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          owner_id: owner.id, // Corrected from reported_by_owner_id
+          user_id: customerToReport.user_id, // Corrected from reported_user_id
+          reason: reason,
+        }),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        toast.success('Customer reported successfully.');
+        closeReportModal();
+      } else {
+        toast.error(`Failed to report customer: ${result.message}`);
+      }
+    } catch (error) {
+      toast.error('An error occurred while reporting the customer.');
+      console.error("Report submission error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const totalNewCustomers = customers.filter(c => c.status === "New Customer").length;
@@ -435,7 +488,7 @@ function CustomerList() {
             {filtered.map((c, i) => (
               <div
                 key={i}
-                className="bg-white rounded-xl border border-gray-300 p-4 flex flex-col gap-2 relative"
+                className="bg-white rounded-xl border border-gray-300 p-4 flex flex-col gap-2"
               >
                 <div className="flex items-center gap-3">
                   <img
@@ -474,12 +527,29 @@ function CustomerList() {
                     <span>{c.customer_email}</span>
                   </div>
                 </div>
-                {/* Removed three-dots button */}
+                {/* Report Button */}
+                <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                  <button
+                    onClick={() => openReportModal(c)}
+                    className="flex items-center gap-2 px-3 py-1 text-sm text-red-600 bg-red-50 rounded-md border border-red-200 hover:bg-red-100 transition-colors"
+                  >
+                    <FaFlag /> Report Customer
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      <ReportCustomerModal
+        isOpen={isReportModalOpen}
+        onClose={closeReportModal}
+        onSubmit={handleReportSubmit}
+        customer={customerToReport}
+        isSubmitting={isSubmitting}
+      />
+      <Toaster position="top-center" reverseOrder={false} />
     </div>
   );
 }
