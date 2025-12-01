@@ -1,4 +1,3 @@
-
 const mysql = require('mysql2/promise');
 
 const DB_HOST = process.env.DB_HOST || 'localhost';

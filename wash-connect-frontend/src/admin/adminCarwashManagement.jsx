@@ -72,6 +72,10 @@ function AdminCarwashManagement() {
     }
   };
 
+  const handleViewReports = (shopId) => {
+    navigate(`/admin/shops/${shopId}/reports`);
+  };
+
   return (
     <div className="min-h-screen flex bg-white">
       {/* Sidebar */}
@@ -215,6 +219,16 @@ function AdminCarwashManagement() {
                             {shop.status === "Banned" ? (
                               <>
                                 <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold mr-2">Banned</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold mr-2">Active</span>
+                              </>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              {shop.status === "Banned" ? (
                                 <button
                                   className="bg-green-100 text-green-700 px-4 py-1 rounded-full font-semibold flex items-center gap-1 hover:bg-green-200"
                                   onClick={() => handleUnban(shop.applicationId)}
@@ -224,10 +238,7 @@ function AdminCarwashManagement() {
                                   </svg>
                                   Unban
                                 </button>
-                              </>
-                            ) : (
-                              <>
-                                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold mr-2">Active</span>
+                              ) : (
                                 <button
                                   className="bg-red-100 text-red-600 px-4 py-1 rounded-full font-semibold flex items-center gap-1 hover:bg-red-200"
                                   onClick={() => handleBan(shop.applicationId)}
@@ -237,8 +248,15 @@ function AdminCarwashManagement() {
                                   </svg>
                                   Ban
                                 </button>
-                              </>
-                            )}
+                              )}
+                              <button
+                                className="bg-gray-100 text-gray-600 px-4 py-1 rounded-full font-semibold flex items-center gap-1 hover:bg-gray-200"
+                                onClick={() => handleViewReports(shop.applicationId)}
+                              >
+                                <FileText className="w-4 h-4" />
+                                Reports
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
