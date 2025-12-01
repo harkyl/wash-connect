@@ -9,6 +9,7 @@ import {
 } from "react-icons/fa";
 import { Search, MapPin, MoreVertical } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import ReportModal from "./components/ReportModal";
 
 const MAIN_LOCATIONS = ["All", "Cordova", "Cebu City", "Mandaue", "Lapu-Lapu"];
 
@@ -58,6 +59,8 @@ function CarwashShopPage() {
   const [loading, setLoading] = useState(true);
   const [activeBooking, setActiveBooking] = useState(null);
   const [shopRatings, setShopRatings] = useState({}); // { [applicationId]: avgRating }
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportingShop, setReportingShop] = useState(null);
 
   // Get user info from localStorage
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -167,6 +170,53 @@ function CarwashShopPage() {
     navigate("/login");
   };
 
+  const handleReportShop = (shop) => {
+    setReportingShop(shop);
+    setIsReportModalOpen(true);
+  };
+
+  const handleCloseReportModal = () => {
+    setIsReportModalOpen(false);
+    setReportingShop(null);
+  };
+
+  const handleSubmitReport = async (reason) => {
+    if (!reportingShop) return;
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || !user.user_id) {
+      toast.error("Could not find user information. Please log in again.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:3000/api/reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          shopId: reportingShop.applicationId,
+          reason: reason,
+          reporterId: user.user_id, // Manually send the user's ID
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit report.");
+      }
+
+      toast.success(`Report for "${reportingShop.carwashName}" has been submitted.`);
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      toast.error(error.message || "An error occurred while submitting the report.");
+    } finally {
+      handleCloseReportModal();
+    }
+  };
+
   const handleViewServices = (shop) => {
     localStorage.setItem("selectedApplicationId", String(shop.applicationId));
     navigate("/book", {
@@ -194,6 +244,14 @@ function CarwashShopPage() {
             secondary: "#e0f7fa",
           },
         }}
+      />
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={handleCloseReportModal}
+        onSubmit={handleSubmitReport}
+        shop={reportingShop}
       />
 
       {/* Sidebar */}
@@ -395,6 +453,12 @@ function CarwashShopPage() {
                             onClick={() => handleViewServices(shop)}
                           >
                             View Services
+                          </button>
+                          <button
+                            className="bg-red-50 text-red-700 px-3 py-1 rounded text-xs border border-red-300 hover:bg-red-100 transition"
+                            onClick={() => handleReportShop(shop)}
+                          >
+                            Report
                           </button>
                         </div>
                       </div>
