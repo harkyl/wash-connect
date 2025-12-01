@@ -1,4 +1,4 @@
-import { Trophy, Eye, Users, FileText, Inbox, LogOut, UserCircle } from "lucide-react";
+import { Trophy, Eye, Users, FileText, Inbox, LogOut, UserCircle, ShieldAlert } from "lucide-react";
 import { Bar, Doughnut } from "react-chartjs-2";
 import Chart from "chart.js/auto"; // auto-registers all needed elements
 import { useState, useEffect, useMemo } from "react";
@@ -246,6 +246,13 @@ function AdminDashboard() {
           >
             <Users className="mr-3 w-5 h-5" />
             Customers
+          </button>
+          <button
+            className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700"
+            onClick={() => navigate("/admin/reported-customers")}
+          >
+            <ShieldAlert className="mr-3 w-5 h-5" />
+            Reported Customers
           </button>
           <hr className="my-4" />
           <button

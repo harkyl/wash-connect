@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trophy, Eye, Users, FileText, Inbox, LogOut, MapPin, Search, UserCircle, Star } from "lucide-react";
+import { Trophy, Eye, Users, FileText, Inbox, LogOut, MapPin, Search, UserCircle, Star, ShieldAlert } from "lucide-react";
 
 function AdminUserManagement() {
   const [customers, setCustomers] = useState([]);
@@ -82,8 +82,15 @@ function AdminUserManagement() {
             className="flex items-center w-full px-4 py-3 rounded-lg bg-cyan-100 text-cyan-700 font-semibold"
             disabled
           >
-            <Star className="mr-3 w-5 h-5" />
+            <Users className="mr-3 w-5 h-5" />
             Customers
+          </button>
+          <button
+            className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700"
+            onClick={() => window.location.href = "/admin/reported-customers"}
+          >
+            <ShieldAlert className="mr-3 w-5 h-5" />
+            Reported Customers
           </button>
           <hr className="my-4" />
           <button

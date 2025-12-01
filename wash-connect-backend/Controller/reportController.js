@@ -91,40 +91,6 @@ const createCustomerReport = async (req, res) => {
   }
 };
 
-const getPendingCustomerReports = async (req, res) => {
-  const query = `
-    SELECT
-        cr.report_id,
-        cr.reason,
-        cr.created_at AS report_date,
-        u.user_id,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.address,
-        u.status,
-        co.owner_first_name AS owner_first_name,
-        co.owner_last_name AS owner_last_name
-    FROM
-        customer_reports cr
-    JOIN
-        users u ON cr.user_id = u.user_id
-    JOIN
-        carwash_owners co ON cr.owner_id = co.id
-    WHERE
-        cr.status = 'pending'
-    ORDER BY
-        cr.created_at DESC;
-  `;
-  try {
-    const [reports] = await db.execute(query);
-    res.json(reports);
-  } catch (error) {
-    console.error('Error fetching reported customers:', error);
-    res.status(500).json({ message: 'Failed to fetch reported customers.' });
-  }
-};
-
 const getCustomerReports = async (req, res) => {
   const query = `
     SELECT
@@ -158,27 +124,11 @@ const getCustomerReports = async (req, res) => {
   }
 };
 
-const resolveCustomerReport = async (req, res) => {
-  const { reportId } = req.params;
-  const query = 'UPDATE customer_reports SET status = ? WHERE report_id = ?';
-  try {
-    const [result] = await db.execute(query, ['resolved', reportId]);
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Report not found.' });
-    }
-    res.status(200).json({ message: 'Report resolved successfully.' });
-  } catch (error) {
-    console.error('Error resolving customer report:', error);
-    res.status(500).json({ message: 'Failed to resolve report.' });
-  }
-};
 
 module.exports = {
   createReport,
   getReportsByShop,
   resolveReport,
   createCustomerReport,
-  getPendingCustomerReports,
   getCustomerReports,
-  resolveCustomerReport,
 };

@@ -19,8 +19,5 @@ router.patch('/:reportId/resolve', reportController.resolveReport);
 // GET /api/reports/customer - Get all reports made against customers
 router.get('/customer', reportController.getCustomerReports);
 
-// PATCH /api/reports/customer/:reportId/resolve - Mark a customer report as resolved
-router.patch('/customer/:reportId/resolve', reportController.resolveCustomerReport);
-
 
 module.exports = router;

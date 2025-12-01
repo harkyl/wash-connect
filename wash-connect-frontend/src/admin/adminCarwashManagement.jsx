@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trophy, Eye, Users, FileText, Inbox, LogOut, Search } from "lucide-react";
+import { Trophy, Eye, Users, FileText, Inbox, LogOut, Search, ShieldAlert } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 function AdminCarwashManagement() {
@@ -107,6 +107,13 @@ function AdminCarwashManagement() {
           >
             <Users className="mr-3 w-5 h-5" />
             Customers
+          </button> 
+          <button
+            className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-700"
+            onClick={() => window.location.href = "/admin/reported-customers"}
+          >
+            <ShieldAlert className="mr-3 w-5 h-5" />
+            Reported Customers
           </button>
           <hr className="my-4" />
           <button
