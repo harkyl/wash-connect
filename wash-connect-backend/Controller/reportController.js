@@ -78,12 +78,11 @@ const createCustomerReport = async (req, res) => {
   }
 
   // Update the query to use the correct column names
-  const query = 'INSERT INTO customer_reports (owner_id, user_id, reason, status) VALUES (?, ?, ?, ?)';
-  const status = 'pending';
+  const query = 'INSERT INTO customer_reports (owner_id, user_id, reason) VALUES (?, ?, ?)';
 
   try {
     // Pass the correct variables to the query
-    const [result] = await db.execute(query, [owner_id, user_id, reason, status]);
+    const [result] = await db.execute(query, [owner_id, user_id, reason]);
     res.status(201).json({ message: 'Customer report submitted successfully.', reportId: result.insertId });
   } catch (err) {
     console.error('Error creating customer report:', err);
@@ -97,15 +96,14 @@ const getCustomerReports = async (req, res) => {
         cr.report_id,
         cr.reason,
         cr.created_at AS report_date,
-        cr.status AS report_status,
         u.user_id,
         u.first_name,
         u.last_name,
         u.email,
         u.address,
         u.status AS user_status,
-        co.owner_first_name AS owner_first_name,
-        co.owner_last_name AS owner_last_name
+        co.owner_first_name,
+        co.owner_last_name
     FROM
         customer_reports cr
     JOIN
