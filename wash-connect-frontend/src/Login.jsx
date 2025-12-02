@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, Check } from "lucide-react"
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Check, User, Briefcase } from "lucide-react"
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from "react-hot-toast";
 
@@ -7,11 +7,13 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [activeTab, setActiveTab] = useState("login")
   const [rememberMe, setRememberMe] = useState(false)
+  const [loginRole, setLoginRole] = useState("user"); // 'user' or 'carwash'
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     identifier: "",
     password: "",
   })
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -21,8 +23,7 @@ function Login() {
     }))
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleUserAdminLogin = async () => {
     try {
       const response = await fetch("http://localhost:3000/api/auth/login", {
         method: "POST",
@@ -59,6 +60,63 @@ function Login() {
       toast.error("An error occurred. Please try again.");
       console.error(err);
     }
+  };
+
+  const handleCarwashOwnerLogin = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/auth/login-carwash-owner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ carwash_owner_id: formData.identifier, ownerPassword: formData.password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Login failed");
+        return;
+      }
+      
+      localStorage.setItem("token", data.token);
+      const ownerId = data.owner.id;
+
+      const appRes = await fetch(`http://localhost:3000/api/carwash-applications/by-owner/${ownerId}`);
+      const appData = await appRes.json();
+      
+      localStorage.setItem("carwashOwner", JSON.stringify({
+        id: ownerId,
+        applicationId: appData.applicationId 
+      }));
+
+      const statusRes = await fetch(`http://localhost:3000/api/carwash-applications/status/${ownerId}`, {
+        headers: { Authorization: `Bearer ${data.token}` },
+      });
+      const statusData = await statusRes.json();
+      const status = (statusData.status || "").toLowerCase();
+
+      if (status === "banned") {
+        navigate("/shop-banned", { replace: true });
+      } else if (status === "declined") {
+        toast.error("Your application has been declined. Please contact support.");
+      } else if (status === "approved") {
+        navigate("/carwash-dashboard");
+      } else if (status === "pending") {
+        navigate("/awaiting-approval");
+      } else {
+        navigate("/carwash-application-registration");
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    if (loginRole === 'user') {
+      await handleUserAdminLogin();
+    } else {
+      await handleCarwashOwnerLogin();
+    }
+    setLoading(false);
   }
 
   return (
@@ -82,6 +140,24 @@ function Login() {
 
             <h2 className="text-cyan-500 text-xl sm:text-2xl font-medium italic mb-1">Login to your account</h2>
             <p className="text-gray-600 text-sm sm:text-base">Enter your login details</p>
+          </div>
+
+          {/* Role Selector */}
+          <div className="flex w-full max-w-xs mx-auto rounded-full overflow-hidden border border-gray-200 mb-6">
+            <button
+              className={`flex-1 py-2 px-4 flex items-center justify-center gap-2 ${loginRole === "user" ? "bg-black text-white" : "bg-white text-black"}`}
+              onClick={() => setLoginRole("user")}
+            >
+              <User className="w-4 h-4" />
+              <span>User</span>
+            </button>
+            <button
+              className={`flex-1 py-2 px-4 flex items-center justify-center gap-2 ${loginRole === "carwash" ? "bg-black text-white" : "bg-white text-black"}`}
+              onClick={() => setLoginRole("carwash")}
+            >
+              <Briefcase className="w-4 h-4" />
+              <span>Owner</span>
+            </button>
           </div>
 
           {/* Tab selector */}
@@ -110,7 +186,7 @@ function Login() {
                 value={formData.identifier}
                 onChange={handleInputChange}
                 className="w-full pl-12 pr-4 py-3 bg-white text-black rounded-full border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                placeholder="Email or ID number"
+                placeholder={loginRole === 'user' ? "Email or ID number" : "Carwash Owner ID"}
                 inputMode="email"
                 autoComplete="username"
               />
@@ -166,9 +242,10 @@ function Login() {
             {/* Login button */}
             <button
               type="submit"
-              className="w-full bg-black text-white py-3 sm:py-3.5 rounded-full font-medium hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 active:scale-[0.99]"
+              disabled={loading}
+              className="w-full bg-black text-white py-3 sm:py-3.5 rounded-full font-medium hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 active:scale-[0.99] disabled:bg-gray-500"
             >
-              <span className="italic">Login</span>
+              <span className="italic">{loading ? "Logging in..." : "Login"}</span>
             </button>
           </form>
         </div>

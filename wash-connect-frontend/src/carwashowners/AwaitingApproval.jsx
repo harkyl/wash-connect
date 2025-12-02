@@ -14,7 +14,7 @@ function AwaitingApproval() {
         </p>
         <button
           className="bg-cyan-500 text-white px-6 py-2 rounded font-semibold hover:bg-cyan-600 transition"
-          onClick={() => navigate("/carwash-login")}
+          onClick={() => navigate("/login")}
         >
           Back to Login
         </button>

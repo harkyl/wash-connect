@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, MapPin, FileText, Upload, ArrowLeft } from "lucide-react";
+import { Building2, MapPin, FileText, Upload, ArrowLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 function CarwashApplicationRegistration() {
   const navigate = useNavigate();
@@ -10,7 +10,7 @@ function CarwashApplicationRegistration() {
   });
   const [logoFile, setLogoFile] = useState(null);
   const [requirementsFile, setRequirementsFile] = useState(null);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -31,38 +31,52 @@ function CarwashApplicationRegistration() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setError("");
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: null });
+    }
     setSuccess("");
   };
 
   const handleLogoChange = (e) => {
     setLogoFile(e.target.files[0]);
-    setError("");
+    if (errors.logo) {
+      setErrors({ ...errors, logo: null });
+    }
     setSuccess("");
   };
   const handleRequirementsChange = (e) => {
     setRequirementsFile(e.target.files[0]);
-    setError("");
+    if (errors.requirements) {
+      setErrors({ ...errors, requirements: null });
+    }
     setSuccess("");
   };
 
   // Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setErrors({});
     setSuccess("");
-    setLoading(true);
 
-    if (!form.carwashName || !form.location || !logoFile || !requirementsFile) {
-      setError("All fields and files are required.");
+    // --- Validation ---
+    const newErrors = {};
+    if (!form.carwashName) newErrors.carwashName = "Company Name is required.";
+    if (!form.location) newErrors.location = "Business Location is required.";
+    if (!logoFile) newErrors.logo = "Company logo is required.";
+    if (!requirementsFile) newErrors.requirements = "Requirements file is required.";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       setLoading(false);
       return;
     }
 
+    setLoading(true);
+
     try {
       const owner = JSON.parse(localStorage.getItem("carwashOwner"));
       if (!owner || !owner.id) {
-        setError("Owner not authenticated. Please log in again.");
+        setErrors({ general: "Owner not authenticated. Please log in again." });
         setLoading(false);
         return;
       }
@@ -81,7 +95,7 @@ function CarwashApplicationRegistration() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Submission failed");
+        setErrors({ general: data.error || "Submission failed" });
         setLoading(false);
         return;
       }
@@ -93,7 +107,7 @@ function CarwashApplicationRegistration() {
       setLoading(false);
       setTimeout(() => navigate("/awaiting-approval"), 1200);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setErrors({ general: "Something went wrong. Please try again." });
       setLoading(false);
     }
   };
@@ -125,10 +139,10 @@ function CarwashApplicationRegistration() {
               name="carwashName"
               value={form.carwashName}
               onChange={handleChange}
-              className="w-full pl-12 pr-4 py-3 bg-white text-black rounded-full border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              className={`w-full pl-12 pr-4 py-3 bg-white text-black rounded-full border ${errors.carwashName ? 'border-red-500' : 'border-gray-300'} placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
               placeholder="Company Name"
-              required
             />
+            {errors.carwashName && <p className="text-red-500 text-sm mt-1 ml-4">{errors.carwashName}</p>}
           </div>
           <div className="relative">
             <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -137,15 +151,15 @@ function CarwashApplicationRegistration() {
               name="location"
               value={form.location}
               onChange={handleChange}
-              className="w-full pl-12 pr-4 py-3 bg-white text-black rounded-full border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              className={`w-full pl-12 pr-4 py-3 bg-white text-black rounded-full border ${errors.location ? 'border-red-500' : 'border-gray-300'} placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
               placeholder="Business Location"
-              required
             />
+            {errors.location && <p className="text-red-500 text-sm mt-1 ml-4">{errors.location}</p>}
           </div>
           <div>
             <label className="block mb-1 font-medium text-gray-700">Company Logo</label>
             <div className="flex items-center gap-3">
-              <label className="flex items-center cursor-pointer bg-cyan-50 border border-cyan-200 px-4 py-2 rounded-full hover:bg-cyan-100 transition">
+              <label className={`flex items-center cursor-pointer bg-cyan-50 border ${errors.logo ? 'border-red-500' : 'border-cyan-200'} px-4 py-2 rounded-full hover:bg-cyan-100 transition`}>
                 <Upload className="w-5 h-5 mr-2 text-cyan-500" />
                 <span className="text-cyan-700 font-medium">Upload Logo</span>
                 <input
@@ -153,18 +167,18 @@ function CarwashApplicationRegistration() {
                   accept="image/*"
                   onChange={handleLogoChange}
                   className="hidden"
-                  required
                 />
               </label>
               {logoFile && (
                 <span className="text-gray-700 text-sm truncate">{logoFile.name}</span>
               )}
             </div>
+            {errors.logo && <p className="text-red-500 text-sm mt-1">{errors.logo}</p>}
           </div>
           <div>
             <label className="block mb-1 font-medium text-gray-700">Requirements (PDF or Word)</label>
             <div className="flex items-center gap-3">
-              <label className="flex items-center cursor-pointer bg-cyan-50 border border-cyan-200 px-4 py-2 rounded-full hover:bg-cyan-100 transition">
+              <label className={`flex items-center cursor-pointer bg-cyan-50 border ${errors.requirements ? 'border-red-500' : 'border-cyan-200'} px-4 py-2 rounded-full hover:bg-cyan-100 transition`}>
                 <FileText className="w-5 h-5 mr-2 text-cyan-500" />
                 <span className="text-cyan-700 font-medium">Upload File</span>
                 <input
@@ -172,19 +186,29 @@ function CarwashApplicationRegistration() {
                   accept=".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   onChange={handleRequirementsChange}
                   className="hidden"
-                  required
                 />
               </label>
               {requirementsFile && (
                 <span className="text-gray-700 text-sm truncate">{requirementsFile.name}</span>
               )}
             </div>
+            {errors.requirements && <p className="text-red-500 text-sm mt-1">{errors.requirements}</p>}
           </div>
-          {error && (
-            <div className="text-red-500 text-center font-medium">{error}</div>
+          {errors.general && (
+            <div className="flex items-center p-4 text-sm text-red-800 rounded-lg bg-red-100" role="alert">
+              <AlertTriangle className="flex-shrink-0 inline w-5 h-5 mr-3" />
+              <div>
+                <span className="font-medium">{errors.general}</span>
+              </div>
+            </div>
           )}
           {success && (
-            <div className="text-green-600 text-center font-medium">{success}</div>
+            <div className="flex items-center p-4 text-sm text-green-800 rounded-lg bg-green-100" role="alert">
+              <CheckCircle2 className="flex-shrink-0 inline w-5 h-5 mr-3" />
+              <div>
+                <span className="font-medium">{success}</span>
+              </div>
+            </div>
           )}
           <button
             type="submit"

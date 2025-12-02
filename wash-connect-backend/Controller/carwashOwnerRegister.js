@@ -6,6 +6,7 @@ exports.registerCarwashOwner = async (req, res) => {
     const {
         ownerFirstName,
         ownerLastName,
+        carwash_owner_id,
         ownerEmail,
         ownerPassword,
         ownerPhone,
@@ -17,7 +18,7 @@ exports.registerCarwashOwner = async (req, res) => {
     const owner_email = ownerEmail;
     const owner_password = ownerPassword;
 
-    if (!owner_name || !owner_email || !owner_password) {
+    if (!owner_name || !owner_email || !owner_password || !carwash_owner_id) {
         return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -40,9 +41,9 @@ exports.registerCarwashOwner = async (req, res) => {
         const hashedPassword = await bcrypt.hash(owner_password, 10);
 
         const [result] = await pool.query(
-            `INSERT INTO carwash_owners (owner_first_name, owner_last_name, owner_email, owner_password, owner_phone, owner_address)
-             VALUES (?, ?, ?, ?, ?,?)`,
-            [ownerFirstName, ownerLastName, owner_email, hashedPassword, ownerPhone || null, ownerAddress || null]
+            `INSERT INTO carwash_owners (owner_first_name, owner_last_name, carwash_owner_id, owner_email, owner_password, owner_phone, owner_address)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [ownerFirstName, ownerLastName, carwash_owner_id, owner_email, hashedPassword, ownerPhone || null, ownerAddress || null]
         );
 
         res.status(201).json({

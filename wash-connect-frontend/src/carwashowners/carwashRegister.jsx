@@ -8,6 +8,7 @@ function CarwashRegister() {
   const [form, setForm] = useState({
     ownerFirstName: "",
     ownerLastName: "",
+    carwash_owner_id: "",
     ownerEmail: "",
     ownerPassword: "",
     ownerPhone: "",
@@ -46,6 +47,7 @@ function CarwashRegister() {
         body: JSON.stringify({
           ownerFirstName: form.ownerFirstName,
           ownerLastName: form.ownerLastName,
+          carwash_owner_id: form.carwash_owner_id,
           ownerEmail: form.ownerEmail,
           ownerPassword: form.ownerPassword,
           ownerPhone: form.ownerPhone,
@@ -110,6 +112,18 @@ function CarwashRegister() {
                 required
               />
             </div>
+          </div>
+          <div className="relative">
+            <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              name="carwash_owner_id"
+              value={form.carwash_owner_id}
+              onChange={handleChange}
+              className="w-full pl-12 pr-4 py-3 bg-white text-black rounded-full border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              placeholder="Carwash Owner ID"
+              required
+            />
           </div>
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
