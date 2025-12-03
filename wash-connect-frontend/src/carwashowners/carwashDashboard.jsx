@@ -276,7 +276,7 @@ export default function CarwashDashboard() {
 				</nav>
 			  <div className="mt-auto px-4 py-6">
 				<button className="flex items-center gap-2 text-gray-700 hover:text-red-500 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer transition-colors duration-200"
-					onClick={() => navigate("/carwash-login")}
+					onClick={() => navigate("/login")}
 				>
 				  <FaRegFolderOpen className="text-lg" /> Logout
 				</button>
@@ -523,6 +523,7 @@ export default function CarwashDashboard() {
                   .slice(0, 5)
                   .map((booking) => {
                     const apptId = getAppointmentId(booking);
+                    const customerName = getCustomerName(booking); // Use helper function
                     return (
                       <div
                         key={apptId}
@@ -530,13 +531,13 @@ export default function CarwashDashboard() {
                         style={{ borderColor: "#ffeeba", background: "#fffde7" }}
                       >
                         <img
-                          src={booking.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.customer_name || "Customer")}`}
+                          src={booking.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}`}
                           alt=""
                           className="w-14 h-14 rounded-full object-cover border-2 border-white shadow"
                         />
                         <div className="flex-1 flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-base">{booking.customer_name}</span>
+                            <span className="font-semibold text-base">{customerName}</span>
                             <span className="text-xs text-gray-500">Customer</span>
                             <span className="ml-auto flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">
                               <svg width="12" height="12" fill="currentColor"><circle cx="6" cy="6" r="6" /></svg>
@@ -706,12 +707,6 @@ export default function CarwashDashboard() {
                   <span>{carwashData?.industry || "Service"}</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="w-24 text-gray-500">Size</span>
-                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">
-                    {carwashData?.company_size || "N/A"}
-                  </span>
-                </div>
-                <div className="flex items-center">
                   <span className="w-24 text-gray-500">Email</span>
                   <span className="flex items-center gap-1">
                     <FaEnvelope className="text-gray-400" /> {ownerData?.owner_email || ownerData?.email || "N/A"}
@@ -722,10 +717,6 @@ export default function CarwashDashboard() {
                   <span className="flex items-center gap-1">
                     <FaPhone className="text-gray-400" /> {ownerData?.owner_phone || ownerData?.phone || "N/A"}
                   </span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-24 text-gray-500">Status</span>
-                  <span className="text-green-600 font-medium">{carwashData?.status || "Contacted"}</span>
                 </div>
                 <div className="flex items-center">
                   <span className="w-24 text-gray-500">Owner</span>
@@ -1107,3 +1098,9 @@ const extractContact = (obj) =>
   obj?.user_phone ??
   obj?.mobile ??
   null;
+
+// NEW: Get customer name with fallback
+const getCustomerName = (booking) =>
+  booking.customer_name ||
+  `${booking.customer_first_name || ""} ${booking.customer_last_name || ""}`.trim() ||
+  "Customer";

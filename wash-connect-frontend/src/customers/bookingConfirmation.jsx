@@ -229,6 +229,35 @@ function BookingConfirmation() {
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Failed to cancel booking.");
+      
+      // NEW: If payment was made (Paid or Partial), automatically create refund request
+      if (isPaid && paidAmount > 0) {
+        try {
+          const user = JSON.parse(localStorage.getItem("user") || "{}");
+          const customer = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+          const ownerId = booking?.applicationId;
+
+          await fetch(`http://localhost:3000/api/refunds`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customer,
+              amount: paidAmount,
+              reason: "Booking cancelled by customer - automatic refund request",
+              bookingId: appointment_id,
+              ownerId
+            }),
+          });
+          
+          toast.success("Booking cancelled. Refund request has been automatically submitted for PHP " + paidAmount);
+        } catch (refundErr) {
+          console.error("Failed to create automatic refund:", refundErr);
+          toast.error("Booking cancelled, but failed to create refund request. Please request refund manually.");
+        }
+      } else {
+        toast.success("Booking has been cancelled successfully.");
+      }
+      
       setCancelSuccess(true);
       setBooking((prev) => ({ ...prev, status: "Cancelled" }));
     } catch {
@@ -538,18 +567,43 @@ function BookingConfirmation() {
                 <div className="flex gap-2 mt-3">
                   {/** Define personnel_id from booking.personnelId */}
                   {(() => {
+                    // Check if reschedule and cancel should be disabled
+                    const isActionDisabled = 
+                      statusIs(booking.status, "Halfway") || 
+                      statusIs(booking.status, "On Going") || 
+                      statusIs(booking.status, "Completed");
+                    
                     return (
                       <>
                         <button
-                          className="flex-1 bg-blue-100 text-blue-700 px-3 py-2 rounded font-semibold hover:bg-blue-200 text-sm"
-                          onClick={() => navigate("/reschedule", { state: { appointment_id, personnel_id: booking.personnelId } })}
+                          className={`flex-1 px-3 py-2 rounded font-semibold text-sm ${
+                            isActionDisabled
+                              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          }`}
+                          onClick={() => {
+                            if (!isActionDisabled) {
+                              navigate("/reschedule", { state: { appointment_id, personnel_id: booking.personnelId } });
+                            }
+                          }}
+                          disabled={isActionDisabled}
+                          title={isActionDisabled ? "Cannot reschedule - service in progress or completed" : "Reschedule booking"}
                         >
                           Reschedule
                         </button>
                         <button
-                          className="flex-1 bg-red-100 text-red-700 px-3 py-2 rounded font-semibold hover:bg-red-200 text-sm"
-                          onClick={handleCancelBooking}
-                          disabled={canceling || booking.status === "Declined"}
+                          className={`flex-1 px-3 py-2 rounded font-semibold text-sm ${
+                            isActionDisabled || canceling || booking.status === "Declined"
+                              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                              : "bg-red-100 text-red-700 hover:bg-red-200"
+                          }`}
+                          onClick={() => {
+                            if (!isActionDisabled) {
+                              handleCancelBooking();
+                            }
+                          }}
+                          disabled={isActionDisabled || canceling || booking.status === "Declined"}
+                          title={isActionDisabled ? "Cannot cancel - service in progress or completed" : "Cancel booking"}
                         >
                           {canceling ? "Cancelling..." : booking.status === "Declined" ? "Booking Cancelled" : "Cancel Booking"}
                         </button>
@@ -663,13 +717,43 @@ function BookingConfirmation() {
               >
                 {isFullyPaid ? "Paid" : "Pay Now"}
               </button>
-              <button
-                className="w-full bg-gray-200 text-gray-700 py-2 rounded font-semibold hover:bg-gray-300"
-                onClick={handleCancelBooking}
-                disabled={canceling || booking.status === "Declined"}
-              >
-                {canceling ? "Cancelling..." : booking.status === "Declined" ? "Booking Cancelled" : "Request Cancellation"}
-              </button>
+              {(() => {
+                const isCancelDisabled = 
+                  statusIs(booking.status, "Halfway") || 
+                  statusIs(booking.status, "On Going") || 
+                  statusIs(booking.status, "Completed") ||
+                  canceling || 
+                  booking.status === "Declined";
+                
+                return (
+                  <button
+                    className={`w-full py-2 rounded font-semibold ${
+                      isCancelDisabled
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                    onClick={() => {
+                      if (!isCancelDisabled) {
+                        handleCancelBooking();
+                      }
+                    }}
+                    disabled={isCancelDisabled}
+                    title={
+                      statusIs(booking.status, "Halfway") || 
+                      statusIs(booking.status, "On Going") || 
+                      statusIs(booking.status, "Completed")
+                        ? "Cannot cancel - service in progress or completed"
+                        : "Request cancellation"
+                    }
+                  >
+                    {canceling 
+                      ? "Cancelling..." 
+                      : booking.status === "Declined" 
+                        ? "Booking Cancelled" 
+                        : "Request Cancellation"}
+                  </button>
+                );
+              })()}
               {/* Request Refund Button */}
               {isPaid && (
                 <button
