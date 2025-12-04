@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, MapPin, FileText, Upload, ArrowLeft, AlertTriangle, CheckCircle2, XCircle, Image } from "lucide-react";
+import { Building2, MapPin, FileText, ArrowLeft, AlertTriangle, CheckCircle2, XCircle, Image, ChevronDown } from "lucide-react";
 
 // Allowed file types
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
@@ -11,6 +11,15 @@ const ALLOWED_DOC_TYPES = [
 ];
 const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
 const ALLOWED_DOC_EXTENSIONS = [".pdf", ".doc", ".docx"];
+
+// Location options
+const LOCATION_OPTIONS = [
+  "Cordova",
+  "Cebu City",
+  "Mandaue",
+  "Lapu-Lapu",
+  "Other"
+];
 
 function CarwashApplicationRegistration() {
   const navigate = useNavigate();
@@ -23,6 +32,10 @@ function CarwashApplicationRegistration() {
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Location dropdown state
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [customLocation, setCustomLocation] = useState("");
 
   // File validation state for better UX
   const [logoValid, setLogoValid] = useState(null); // null = not set, true = valid, false = invalid
@@ -43,10 +56,39 @@ function CarwashApplicationRegistration() {
       .catch(() => {});
   }, [navigate]);
 
+  // Update form.location when dropdown or custom location changes
+  useEffect(() => {
+    if (selectedLocation === "Other") {
+      setForm(prev => ({ ...prev, location: customLocation }));
+    } else {
+      setForm(prev => ({ ...prev, location: selectedLocation }));
+    }
+  }, [selectedLocation, customLocation]);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     if (errors[e.target.name]) {
       setErrors({ ...errors, [e.target.name]: null });
+    }
+    setSuccess("");
+  };
+
+  const handleLocationChange = (e) => {
+    const value = e.target.value;
+    setSelectedLocation(value);
+    if (value !== "Other") {
+      setCustomLocation("");
+    }
+    if (errors.location) {
+      setErrors({ ...errors, location: null });
+    }
+    setSuccess("");
+  };
+
+  const handleCustomLocationChange = (e) => {
+    setCustomLocation(e.target.value);
+    if (errors.location) {
+      setErrors({ ...errors, location: null });
     }
     setSuccess("");
   };
@@ -165,7 +207,13 @@ function CarwashApplicationRegistration() {
     // --- Validation ---
     const newErrors = {};
     if (!form.carwashName) newErrors.carwashName = "Company Name is required.";
-    if (!form.location) newErrors.location = "Business Location is required.";
+    if (!form.location) {
+      if (!selectedLocation) {
+        newErrors.location = "Business Location is required.";
+      } else if (selectedLocation === "Other" && !customLocation.trim()) {
+        newErrors.location = "Please enter your business location.";
+      }
+    }
     if (!logoFile) newErrors.logo = "Company logo is required.";
     if (!requirementsFile) newErrors.requirements = "Requirements file is required.";
 
@@ -251,7 +299,7 @@ function CarwashApplicationRegistration() {
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-lg p-6 sm:p-10 border border-gray-200">
         <button
           className="mb-6 p-2 hover:bg-black/10 rounded-full transition-colors"
-          onClick={() => navigate("/carwash-login")}
+          onClick={() => navigate("/login")}
         >
           <ArrowLeft className="w-6 h-6 text-black" />
         </button>
@@ -280,18 +328,58 @@ function CarwashApplicationRegistration() {
             {errors.carwashName && <p className="text-red-500 text-sm mt-1 ml-4">{errors.carwashName}</p>}
           </div>
 
-          {/* Business Location */}
-          <div className="relative">
-            <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              name="location"
-              value={form.location}
-              onChange={handleChange}
-              className={`w-full pl-12 pr-4 py-3 bg-white text-black rounded-full border ${errors.location ? 'border-red-500' : 'border-gray-300'} placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
-              placeholder="Business Location"
-            />
-            {errors.location && <p className="text-red-500 text-sm mt-1 ml-4">{errors.location}</p>}
+          {/* Business Location Dropdown */}
+          <div>
+            <div className="relative">
+              <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+              <select
+                value={selectedLocation}
+                onChange={handleLocationChange}
+                className={`w-full pl-12 pr-10 py-3 bg-white text-black rounded-full border ${
+                  errors.location ? 'border-red-500' : 'border-gray-300'
+                } appearance-none focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer ${
+                  !selectedLocation ? 'text-gray-400' : 'text-black'
+                }`}
+              >
+                <option value="" disabled>Select Business Location</option>
+                {LOCATION_OPTIONS.map((loc) => (
+                  <option key={loc} value={loc} className="text-black">
+                    {loc}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* Custom location input when "Other" is selected */}
+            {selectedLocation === "Other" && (
+              <div className="relative mt-3">
+                <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={customLocation}
+                  onChange={handleCustomLocationChange}
+                  className={`w-full pl-12 pr-4 py-3 bg-white text-black rounded-full border ${
+                    errors.location && !customLocation.trim() ? 'border-red-500' : 'border-gray-300'
+                  } placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                  placeholder="Enter your business location"
+                />
+              </div>
+            )}
+
+            {errors.location && (
+              <p className="text-red-500 text-sm mt-1 ml-4">{errors.location}</p>
+            )}
+
+            {/* Selected location indicator */}
+            {form.location && !errors.location && (
+              <div className="flex items-center gap-2 mt-2 ml-4">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span className="text-sm text-green-700">
+                  Location: {form.location}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Company Logo Upload */}
