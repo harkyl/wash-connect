@@ -12,6 +12,15 @@ const normalizeImg = (raw) => {
     : `http://localhost:3000/${String(raw).replace(/^\/?/, "")}`;
 };
 
+// Address options
+const ADDRESS_OPTIONS = [
+  "Cordova",
+  "Cebu City",
+  "Lapu-Lapu",
+  "Mandaue",
+  "Other"
+];
+
 function BookForm() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,9 +44,13 @@ function BookForm() {
     date: "",
     time: "",
     message: "",
-    vehicleModel: "",      // NEW
+    vehicleModel: "",
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Address dropdown state
+  const [selectedAddress, setSelectedAddress] = useState("");
+  const [customAddress, setCustomAddress] = useState("");
 
   // Vehicle type enum: Car or Motorcycle
   const [vehicleType, setVehicleType] = useState("Motorcycle");
@@ -47,19 +60,42 @@ function BookForm() {
   const [selectedPersonnelId, setSelectedPersonnelId] = useState("");
   const [fetchedServices, setFetchedServices] = useState([]);
   const [unavailablePersonnelIds, setUnavailablePersonnelIds] = useState([]);
-  // Check if the booking is completed and paid (after booking is made)
   const [bookingStatus, setBookingStatus] = useState({ completed: false, paid: false });
 
   // Prefill from navigation state (user profile info)
   useEffect(() => {
+    const prefillAddress = location.state?.address || "";
+    
+    // Check if the prefill address matches any option
+    const matchedOption = ADDRESS_OPTIONS.find(
+      opt => opt.toLowerCase() === prefillAddress.toLowerCase()
+    );
+    
+    if (matchedOption && matchedOption !== "Other") {
+      setSelectedAddress(matchedOption);
+      setCustomAddress("");
+    } else if (prefillAddress) {
+      setSelectedAddress("Other");
+      setCustomAddress(prefillAddress);
+    }
+
     setForm((prev) => ({
       ...prev,
       firstName: location.state?.firstName || "",
       lastName: location.state?.lastName || "",
       email: location.state?.email || "",
-      address: location.state?.address || "",
+      address: prefillAddress,
     }));
   }, [location.state]);
+
+  // Update form.address when dropdown or custom address changes
+  useEffect(() => {
+    if (selectedAddress === "Other") {
+      setForm(prev => ({ ...prev, address: customAddress }));
+    } else {
+      setForm(prev => ({ ...prev, address: selectedAddress }));
+    }
+  }, [selectedAddress, customAddress]);
 
   // Fetch personnel (via application -> owner -> personnel)
   useEffect(() => {
@@ -69,7 +105,6 @@ function BookForm() {
         return;
       }
       try {
-        // 1. Get carwash application by ID to find ownerId
         const appRes = await fetch(`http://localhost:3000/api/carwash-applications/by-application/${applicationId}`);
         const appData = await appRes.json();
         const ownerId = appData.ownerId;
@@ -77,7 +112,6 @@ function BookForm() {
           setPersonnelList([]);
           return;
         }
-        // 2. Fetch personnel by ownerId and role
         const personnelRes = await fetch(
           `http://localhost:3000/api/personnel/by-owner/${ownerId}?role=${encodeURIComponent(selectedServiceName)}`
         );
@@ -90,7 +124,7 @@ function BookForm() {
     fetchPersonnel();
   }, [applicationId, selectedServiceName]);
 
-  // Fetch services (optional, to fill price/image if not passed via state)
+  // Fetch services
   useEffect(() => {
     (async () => {
       try {
@@ -114,7 +148,6 @@ function BookForm() {
     })();
   }, [applicationId]);
 
-  // Resolve selected service (name from state; price/img from state or fetched list)
   const selectedService = useMemo(() => {
     const fromApi = fetchedServices.find((s) => s.name === selectedServiceName);
     return {
@@ -127,7 +160,6 @@ function BookForm() {
     };
   }, [selectedServiceName, statePrice, stateImg, fetchedServices]);
 
-  // Price with vehicle surcharge (₱200 if Car)
   const finalPrice = useMemo(() => {
     const base = Number(selectedService.price ?? 0);
     return base + (vehicleType === "Car" ? 200 : 0);
@@ -173,10 +205,10 @@ function BookForm() {
           address,
           message,
           personnelId: selectedPersonnelId,
-          price, // includes vehicle surcharge if Car
+          price,
           schedule_time,
           vehicle_type: vehicleType,
-          vehicle_model: form.vehicleModel,   // NEW
+          vehicle_model: form.vehicleModel,
         }),
       });
       const data = await res.json();
@@ -189,7 +221,6 @@ function BookForm() {
     }
   };
 
-  // Optional: support refresh scenario where appointment_id could be passed
   const appointment_id = location.state?.appointment_id;
   useEffect(() => {
     if (!appointment_id) {
@@ -201,7 +232,6 @@ function BookForm() {
     }
   }, [appointment_id]);
 
-  // Check if the booking is completed and paid (after booking is made)
   useEffect(() => {
     if (!appointment_id) return;
     setBookingStatus({ completed: false, paid: false });
@@ -220,7 +250,6 @@ function BookForm() {
       });
   }, [appointment_id]);
 
-  // Fetch unavailable personnel for selected date/time (strict 60-minute gap)
   useEffect(() => {
     async function fetchUnavailablePersonnel() {
       if (!form.date || !form.time || !applicationId) {
@@ -255,13 +284,12 @@ function BookForm() {
 
         const selectedMin = toMinutes(form.time);
 
-        // Block any personnel with a booking within 60 minutes of selected time
         const conflicting = rows.filter((row) => {
           if (isInactive(row)) return false;
           const rowTime = toMinutes(row?.schedule_time);
           if (Number.isNaN(selectedMin) || Number.isNaN(rowTime)) return false;
           const diff = Math.abs(rowTime - selectedMin);
-          return diff < 60; // strict 60-minute gap
+          return diff < 60;
         });
 
         const ids = conflicting
@@ -288,7 +316,6 @@ function BookForm() {
   );
 
   function parseTime(str) {
-    // Converts "8:00 AM" to "08:00", "3:00 PM" to "15:00"
     if (!str) return "";
     let [time, period] = str.split(" ");
     let [hour, minute] = time.split(":");
@@ -301,20 +328,18 @@ function BookForm() {
   let personnelMinTime = "";
   let personnelMaxTime = "";
   if (selectedPersonnel?.time_available) {
-    // Example: "8:00 AM - 3:00 PM"
     const [start, end] = selectedPersonnel.time_available.split(" - ");
     personnelMinTime = parseTime(start);
     personnelMaxTime = parseTime(end);
   }
 
   function getDayOfWeek(dateStr) {
-    // Returns "Mon", "Tue", etc. for a yyyy-mm-dd string
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const d = new Date(dateStr);
     return days[d.getDay()];
   }
 
-  const availableDays = selectedPersonnel?.day_available?.split(",").map(d => d.trim()); // ["Mon", "Wed", "Fri"]
+  const availableDays = selectedPersonnel?.day_available?.split(",").map(d => d.trim());
 
   return (
     <div
@@ -328,38 +353,39 @@ function BookForm() {
       }}
     >
       <Toaster position="top-center" />
-      <div className="w-72" />
-      <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-        <div className="bg-white bg-opacity-95 rounded-2xl shadow p-10 max-w-2xl w-full mx-auto mt-10 mb-10 border border-gray-200 relative">
+      {/* Hidden on mobile, visible on larger screens */}
+      <div className="hidden md:block w-72" />
+      <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-4 sm:px-6">
+        <div className="bg-white bg-opacity-95 rounded-2xl shadow p-4 sm:p-6 md:p-10 max-w-2xl w-full mx-auto mt-4 sm:mt-10 mb-4 sm:mb-10 border border-gray-200 relative">
           <button
-            className="absolute left-6 top-6 text-black hover:bg-gray-100 rounded-full p-1"
+            className="absolute left-4 sm:left-6 top-4 sm:top-6 text-black hover:bg-gray-100 rounded-full p-1"
             onClick={() => navigate(-1)}
             aria-label="Back"
           >
             <ArrowLeft size={18} />
           </button>
 
-          <h1 className="text-3xl font-semibold mb-2 mt-2 text-center w-full">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-2 mt-6 sm:mt-2 text-center w-full">
             You have booked <span className="text-blue-600">{selectedService.name}</span> in{" "}
             <span className="text-cyan-600">{carwashName}</span>
           </h1>
-          <p className="mb-6 text-gray-700 text-center w-full">
+          <p className="mb-4 sm:mb-6 text-gray-700 text-center w-full text-sm sm:text-base">
             Please review your selected service and fill out the booking form below.
           </p>
 
           {/* Service summary */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <div className="flex items-center gap-4 border rounded-lg p-3 bg-white">
+          <div className="flex items-center justify-center gap-4 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 border rounded-lg p-3 bg-white w-full sm:w-auto">
               <img
                 src={selectedService.img}
                 alt={selectedService.name}
-                className="w-20 h-20 rounded object-cover"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded object-cover"
                 onError={(e) => {
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = placeholderImg;
                 }}
               />
-              <div>
+              <div className="text-center sm:text-left">
                 <div className="font-semibold">{selectedService.name}</div>
                 <div className="text-gray-700">
                   Price: ₱{finalPrice}
@@ -375,9 +401,10 @@ function BookForm() {
 
           {/* Booking Form */}
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block mb-1 text-gray-700">First name</label>
+            {/* Name and Email - Stack on mobile */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="block mb-1 text-gray-700 text-sm sm:text-base">First name</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -386,13 +413,13 @@ function BookForm() {
                     placeholder="John"
                     value={form.firstName}
                     onChange={handleChange}
-                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none"
+                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none text-sm sm:text-base"
                     required
                   />
                 </div>
               </div>
-              <div className="flex-1">
-                <label className="block mb-1 text-gray-700">Last name</label>
+              <div>
+                <label className="block mb-1 text-gray-700 text-sm sm:text-base">Last name</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -401,13 +428,13 @@ function BookForm() {
                     placeholder="Doe"
                     value={form.lastName}
                     onChange={handleChange}
-                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none"
+                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none text-sm sm:text-base"
                     required
                   />
                 </div>
               </div>
-              <div className="flex-1">
-                <label className="block mb-1 text-gray-700">Email address</label>
+              <div className="sm:col-span-2 lg:col-span-1">
+                <label className="block mb-1 text-gray-700 text-sm sm:text-base">Email address</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -416,7 +443,7 @@ function BookForm() {
                     placeholder="Johndoe123@gmail.com"
                     value={form.email}
                     onChange={handleChange}
-                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none"
+                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none text-sm sm:text-base"
                     required
                   />
                 </div>
@@ -424,51 +451,75 @@ function BookForm() {
             </div>
 
             {/* Vehicle Type + Model */}
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block mb-1 text-gray-700">Vehicle type</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-1 text-gray-700 text-sm sm:text-base">Vehicle type</label>
                 <select
                   value={vehicleType}
                   onChange={(e) => setVehicleType(e.target.value)}
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border rounded px-3 py-2 text-sm sm:text-base"
                   required
                 >
                   <option value="Motorcycle">Motorcycle</option>
                   <option value="Car">Car</option>
                 </select>
               </div>
-              <div className="flex-1">
-                <label className="block mb-1 text-gray-700">Vehicle model</label>
+              <div>
+                <label className="block mb-1 text-gray-700 text-sm sm:text-base">Vehicle model</label>
                 <input
                   type="text"
                   name="vehicleModel"
                   placeholder="e.g., Toyota Vios 2018"
                   value={form.vehicleModel}
                   onChange={handleChange}
-                  className="px-3 py-2 rounded border border-gray-300 w-full focus:outline-none"
+                  className="px-3 py-2 rounded border border-gray-300 w-full focus:outline-none text-sm sm:text-base"
                   required
                 />
               </div>
             </div>
 
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block mb-1 text-gray-700">Address</label>
+            {/* Address Dropdown and Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-1 text-gray-700 text-sm sm:text-base">Address</label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    name="address"
-                    placeholder="Pilipog Cordova Cebu"
-                    value={form.address}
-                    onChange={handleChange}
-                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none"
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                  <select
+                    value={selectedAddress}
+                    onChange={(e) => {
+                      setSelectedAddress(e.target.value);
+                      if (e.target.value !== "Other") {
+                        setCustomAddress("");
+                      }
+                    }}
+                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none text-sm sm:text-base appearance-none bg-white"
                     required
-                  />
+                  >
+                    <option value="">Select location...</option>
+                    {ADDRESS_OPTIONS.map((addr) => (
+                      <option key={addr} value={addr}>
+                        {addr}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+                {/* Show custom input when "Other" is selected */}
+                {selectedAddress === "Other" && (
+                  <div className="relative mt-2">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Enter your address"
+                      value={customAddress}
+                      onChange={(e) => setCustomAddress(e.target.value)}
+                      className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none text-sm sm:text-base"
+                      required
+                    />
+                  </div>
+                )}
               </div>
-              <div className="flex-1">
-                <label className="block mb-1 text-gray-700">Schedule date</label>
+              <div>
+                <label className="block mb-1 text-gray-700 text-sm sm:text-base">Schedule date</label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -476,7 +527,7 @@ function BookForm() {
                     name="date"
                     value={form.date}
                     onChange={handleChange}
-                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none"
+                    className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none text-sm sm:text-base"
                     required
                     min={new Date().toISOString().split("T")[0]}
                     disabled={!availableDays?.length}
@@ -495,7 +546,7 @@ function BookForm() {
                     </div>
                   )}
                   {selectedPersonnel && selectedPersonnel.day_available && (
-                    <div className="mt-2 text-sm text-blue-700">
+                    <div className="mt-2 text-xs sm:text-sm text-blue-700">
                       <strong>Available Day:</strong> {selectedPersonnel.day_available}
                     </div>
                   )}
@@ -503,13 +554,14 @@ function BookForm() {
               </div>
             </div>
 
-            <div className="flex-1">
-              <label className="block mb-1 text-gray-700">Select Carwash Boy</label>
+            {/* Carwash Boy Selection */}
+            <div>
+              <label className="block mb-1 text-gray-700 text-sm sm:text-base">Select Carwash Boy</label>
               <select
                 name="personnelId"
                 value={selectedPersonnelId}
                 onChange={(e) => setSelectedPersonnelId(e.target.value)}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-3 py-2 text-sm sm:text-base"
                 required
               >
                 <option value="">Select...</option>
@@ -530,20 +582,21 @@ function BookForm() {
                 ))}
               </select>
               {selectedPersonnel && selectedPersonnel.time_available && (
-                <div className="mb-2 text-sm text-blue-700">
+                <div className="mt-2 text-xs sm:text-sm text-blue-700">
                   <strong>Available Time:</strong> {selectedPersonnel.time_available}
                 </div>
               )}
             </div>
 
-            <div className="flex-1">
-              <label className="block mb-1 text-gray-700">Select Time</label>
+            {/* Time Selection */}
+            <div>
+              <label className="block mb-1 text-gray-700 text-sm sm:text-base">Select Time</label>
               <input
                 type="time"
                 name="time"
                 value={form.time || ""}
                 onChange={handleChange}
-                className="pl-9 pr-3 py-2 rounded border border-gray-300 w-full focus:outline-none"
+                className="px-3 py-2 rounded border border-gray-300 w-full focus:outline-none text-sm sm:text-base"
                 required
                 min={personnelMinTime}
                 max={personnelMaxTime}
@@ -564,20 +617,21 @@ function BookForm() {
               )}
             </div>
 
+            {/* Additional Message */}
             <div>
-              <label className="block mb-1 text-gray-700">Additional message</label>
+              <label className="block mb-1 text-gray-700 text-sm sm:text-base">Additional message</label>
               <textarea
                 name="message"
                 placeholder="Type any additional request or message here."
                 value={form.message}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded p-3 min-h-[80px] focus:outline-none"
+                className="w-full border border-gray-300 rounded p-3 min-h-[80px] focus:outline-none text-sm sm:text-base"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full mt-4 bg-[#b3e0ff] hover:bg-[#90c8e8] text-black text-2xl font-medium py-2 rounded border border-gray-300 transition"
+              className="w-full mt-4 bg-[#b3e0ff] hover:bg-[#90c8e8] text-black text-lg sm:text-xl md:text-2xl font-medium py-2 sm:py-3 rounded border border-gray-300 transition"
               disabled={
                 submitting ||
                 (selectedPersonnelId && unavailablePersonnelIds.includes(String(selectedPersonnelId)))
@@ -586,15 +640,15 @@ function BookForm() {
               {submitting ? "Submitting..." : "Submit"}
             </button>
             {selectedPersonnelId && unavailablePersonnelIds.includes(String(selectedPersonnelId)) && (
-              <div className="text-red-500 text-sm mt-2">
+              <div className="text-red-500 text-xs sm:text-sm mt-2">
                 This carwash boy is unavailable within 1 hour of your selected time. Please choose another time or personnel.
               </div>
             )}
           </form>
 
-          {/* Example usage: show a message if booking is completed and paid */}
+          {/* Booking completed message */}
           {bookingStatus.completed && bookingStatus.paid && (
-            <div className="bg-green-100 text-green-700 rounded p-4 mb-4 text-center">
+            <div className="bg-green-100 text-green-700 rounded p-3 sm:p-4 mb-4 text-center text-sm sm:text-base mt-4">
               Your booking is <b>Completed</b> and <b>Paid</b>. Thank you!
             </div>
           )}
