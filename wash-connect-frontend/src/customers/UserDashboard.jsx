@@ -110,9 +110,12 @@ function UserDashboard() {
       })
         .then((res) => res.json())
         .then((bookingsData) => {
+          // Show all except Declined/Cancelled, but include Refunded
           setBookings(
             (bookingsData || []).filter(
-              (b) => b.status !== "Declined" && b.status !== "Cancelled"
+              (b) =>
+                b.status !== "Declined" &&
+                (b.status !== "Cancelled" || b.payment_status === "Refunded")
             )
           );
         })
@@ -600,7 +603,9 @@ function UserDashboard() {
                                   {booking.title || booking.service_name}
                                 </h4>
                                 <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold shadow whitespace-nowrap ${
-                                  booking.status === "Pending"
+                                  booking.status === "Refunded" || booking.payment_status === "Refunded"
+                                    ? "bg-pink-100 text-pink-700"
+                                    : booking.status === "Pending"
                                     ? "bg-yellow-100 text-yellow-700"
                                     : booking.status === "Approved" || booking.status === "Confirmed"
                                     ? "bg-green-100 text-green-700"
@@ -608,7 +613,13 @@ function UserDashboard() {
                                     ? "bg-red-100 text-red-700"
                                     : "bg-gray-100 text-gray-700"
                                 }`}>
-                                  {booking.status}
+                                  {(booking.status === "Refunded" || booking.payment_status === "Refunded") ? (
+                                    <>
+                                      Refunded <span className="ml-1" title="Refunded">💸</span>
+                                    </>
+                                  ) : (
+                                    booking.status
+                                  )}
                                 </span>
                               </div>
                               <div className="text-sm text-gray-600 mb-2 truncate">
@@ -647,6 +658,12 @@ function UserDashboard() {
                               })()}
                             </div>
                           </div>
+                          {/* Optionally, show a note for refunded bookings */}
+                          {(booking.status === "Refunded" || booking.payment_status === "Refunded") && (
+                            <div className="mt-2 text-xs text-pink-600 font-medium">
+                              Refunded. Please check your email for details.
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
@@ -741,7 +758,7 @@ function UserDashboard() {
                           <Calendar className="mr-2 text-cyan-400" /> Birthday
                         </label>
                         <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 font-medium">
-                          {formatBirthday(userInfo.birthday)}
+                          {userInfo.birthday}
                         </div>
                       </div>
                       <div>
