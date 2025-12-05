@@ -41,9 +41,11 @@ export default function TrackStatus() {
     navigate("/login");
   };
 
-  // Filter for Completed, On Going, and Halfway bookings first
+  // Filter for Completed, On Going, Halfway, and Refunded bookings
   const filteredBookings = bookings.filter(
-    (b) => ["Completed", "On Going", "Halfway"].includes(b.status)
+    (b) =>
+      ["Completed", "On Going", "Halfway", "Refunded"].includes(b.status) ||
+      b.payment_status === "Refunded"
   );
 
   // Apply search filter
@@ -65,7 +67,10 @@ export default function TrackStatus() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  const getStatusBadgeClass = (status) => {
+  const getStatusBadgeClass = (status, paymentStatus) => {
+    if (status === "Refunded" || paymentStatus === "Refunded") {
+      return "bg-pink-100 text-pink-700";
+    }
     switch (status) {
       case "Completed":
         return "bg-green-100 text-green-700";
@@ -78,6 +83,13 @@ export default function TrackStatus() {
       default:
         return "bg-gray-100 text-gray-700";
     }
+  };
+
+  const getStatusTooltip = (status, paymentStatus) => {
+    if (status === "Refunded" || paymentStatus === "Refunded") {
+      return "This booking was refunded. Please check your email for details.";
+    }
+    return "";
   };
 
   return (
@@ -288,8 +300,19 @@ export default function TrackStatus() {
                       </tr>
                     ) : (
                       paged.map(b => (
-                        <tr key={b.appointment_id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">#{b.appointment_id}</td>
+                        <tr
+                          key={b.appointment_id}
+                          className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                            b.status === "Refunded" ? "bg-pink-50" : ""
+                          }`}
+                          title={getStatusTooltip(b.status, b.payment_status)}
+                        >
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            #{b.appointment_id}
+                            {(b.status === "Refunded" || b.payment_status === "Refunded") && (
+                              <span className="ml-2 text-pink-500" title="Refunded">💸</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-sm text-gray-700">{b.service_name}</td>
                           <td className="px-4 py-3 text-sm text-gray-500">
                             {b.updated_at
@@ -297,8 +320,11 @@ export default function TrackStatus() {
                               : "-"}
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(b.status)}`}>
-                              {b.status}
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(b.status, b.payment_status)}`}
+                              title={getStatusTooltip(b.status, b.payment_status)}
+                            >
+                              {b.status === "Refunded" || b.payment_status === "Refunded" ? "Refunded" : b.status}
                             </span>
                           </td>
                         </tr>
@@ -319,17 +345,28 @@ export default function TrackStatus() {
                   </div>
                 ) : (
                   paged.map(b => (
-                    <div 
-                      key={b.appointment_id} 
-                      className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-gray-200 rounded-xl p-4 shadow-sm"
+                    <div
+                      key={b.appointment_id}
+                      className={`bg-gradient-to-r from-blue-50 to-cyan-50 border border-gray-200 rounded-xl p-4 shadow-sm ${
+                        b.status === "Refunded" ? "border-pink-400 bg-pink-50" : ""
+                      }`}
+                      title={getStatusTooltip(b.status, b.payment_status)}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <span className="text-xs text-gray-500">Booking ID</span>
-                          <p className="font-semibold text-gray-900">#{b.appointment_id}</p>
+                          <p className="font-semibold text-gray-900">
+                            #{b.appointment_id}
+                            {(b.status === "Refunded" || b.payment_status === "Refunded") && (
+                              <span className="ml-2 text-pink-500" title="Refunded">💸</span>
+                            )}
+                          </p>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(b.status)}`}>
-                          {b.status}
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(b.status, b.payment_status)}`}
+                          title={getStatusTooltip(b.status, b.payment_status)}
+                        >
+                          {b.status === "Refunded" || b.payment_status === "Refunded" ? "Refunded" : b.status}
                         </span>
                       </div>
                       <div className="border-t border-gray-200 pt-2 mt-2">
@@ -346,6 +383,11 @@ export default function TrackStatus() {
                           </span>
                         </div>
                       </div>
+                      {(b.status === "Refunded" || b.payment_status === "Refunded") && (
+                        <div className="mt-2 text-xs text-pink-600 font-medium">
+                          Refunded. Please check your email for details.
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
